@@ -52,6 +52,14 @@ gcloud run deploy franchise-tycoon --source . --region us-central1 --allow-unaut
 
 To ship an update, run the last command again.
 
+### Lost your commissioner link?
+
+The browser you created the league in remembers it: open the site there and it goes straight into the league. Otherwise, print it from the league data (Cloud Run setup above; replace the bucket and domain with yours):
+
+```bash
+gcloud storage cat gs://PROJECT-franchise-tycoon/leagues.json | python3 -c "import json,sys; d=json.load(sys.stdin); [print(lg['data']['name'], '-> https://YOUR-DOMAIN/#'+t) for lg in d['leagues'].values() for t,w in lg['tokens'].items() if w.get('admin')]"
+```
+
 ### How a season runs
 
 1. The commissioner creates the league season from their Sleeper username, sets the rules, and sends each owner their private link from the Admin tab. A link is that owner's login.

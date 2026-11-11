@@ -94,6 +94,8 @@ main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1
 .board.day { background: linear-gradient(180deg, #4f97d1 0%, #8fc4e8 55%, #d9e6dc 100%); }
 #city { width: 100%; height: 100%; display: block; touch-action: manipulation; }
 .visit { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 24px); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; background: rgba(22, 31, 45, .92); border: 1px solid var(--line); border-top: 3px solid var(--gold); border-radius: 8px; padding: 8px 10px; }
+.visit.intrip { opacity: 0; pointer-events: none; }
+.visit { transition: opacity .3s; }
 .visit div { display: flex; flex-direction: column; min-width: 0; padding: 0 6px; }
 .visit span { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--gold); }
 .visit b { font: 700 20px/1.1 var(--display); text-transform: uppercase; overflow-wrap: anywhere; }
@@ -2325,7 +2327,71 @@ html, body { height: auto; }
     wallText(ctx, 'L', xb - 0.95, y + 0.1, z + 3.5, 'TO ' + String(name).toUpperCase().slice(0, 18), 5.5, '#f4f1ea');
   };
 
+  // ---- travelling between cities -------------------------------------------------------------
+  /** A copy of the current frame, used as one end of a trip. */
+  R.snapshot = function () {
+    this.draw();
+    const c = root.document.createElement('canvas');
+    c.width = this.canvas.width; c.height = this.canvas.height;
+    c.getContext('2d').drawImage(this.canvas, 0, 0);
+    return c;
+  };
+  /** Fly (or ride the train) from one city frame to another: zoom out, cross the map, zoom in.
+      opts: {fromName, toName, rail, color, dur}. While a trip runs, draw() shows it instead of the city. */
+  R.travel = function (a, b, opts) { this.trip = Object.assign({ a, b, t0: root.performance.now(), dur: 2300 }, opts); };
+  const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+  R.drawTrip = function () {
+    const tr = this.trip, t = (root.performance.now() - tr.t0) / tr.dur;
+    if (t >= 1) { this.trip = null; return false; }
+    const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height, k = this.dpr, small = 0.3;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, H);
+    const D = W * 0.78, cy = H * 0.52;
+    let s, ax, bx, u = 0;
+    if (t < 0.3) { s = 1 - (1 - small) * ease(t / 0.3); ax = W / 2; }
+    else if (t < 0.72) { s = small; u = ease((t - 0.3) / 0.42); ax = W / 2 - u * D; }
+    else { s = small + (1 - small) * ease((t - 0.72) / 0.28); ax = W / 2 - D; }
+    bx = ax + D;
+    // clouds drift past faster than the islands, which sells the distance
+    ctx.save(); ctx.globalAlpha = 0.5 * Math.min(1, (1 - s) / (1 - small));
+    for (let i = 0; i < 9; i++) {
+      const x = ((hash(i, 21) * 1.6 * W - u * W * 1.3) % (1.6 * W) + 1.6 * W) % (1.6 * W) - 0.3 * W, y = H * (0.12 + hash(i, 22) * 0.76), r = (30 + hash(i, 23) * 40) * k;
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(x, y, r * 1.8, r * 0.55, 0, 0, Math.PI * 2); ctx.ellipse(x + r * 0.7, y - r * 0.25, r, r * 0.5, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+    const img = (c, x, sc) => ctx.drawImage(c, x - (W * sc) / 2, cy - (H * sc) / 2 - (1 - sc) * H * 0.02, W * sc, H * sc);
+    const label = (txt, x) => { ctx.font = '700 ' + 15 * k + 'px "Barlow Condensed", "Arial Narrow", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.lineWidth = 4 * k; ctx.strokeStyle = 'rgba(15,22,34,.75)'; ctx.strokeText(txt.toUpperCase(), x, cy + H * small * 0.42); ctx.fillStyle = '#f4f1ea'; ctx.fillText(txt.toUpperCase(), x, cy + H * small * 0.42); };
+    if (t < 0.3) { img(tr.a, ax, s); return true; }
+    if (t >= 0.72) { img(tr.b, bx, s); return true; }
+    // the crossing: both islands, the route between them, and the vehicle on it
+    const mx = (ax + bx) / 2, my = cy - H * 0.2, bez = (p) => [(1 - p) * (1 - p) * ax + 2 * (1 - p) * p * mx + p * p * bx, (1 - p) * (1 - p) * cy + 2 * (1 - p) * p * my + p * p * cy];
+    ctx.save(); ctx.lineCap = 'round';
+    if (tr.rail) { ctx.strokeStyle = 'rgba(200,206,214,.95)'; ctx.lineWidth = 5 * k; ctx.setLineDash([]); }
+    else { ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 2.5 * k; ctx.setLineDash([3 * k, 9 * k]); }
+    ctx.beginPath(); ctx.moveTo(ax, cy); ctx.quadraticCurveTo(mx, my, bx, cy); ctx.stroke();
+    if (tr.rail) { ctx.strokeStyle = 'rgba(80,90,104,.9)'; ctx.lineWidth = 1.2 * k; ctx.setLineDash([2 * k, 6 * k]); ctx.beginPath(); ctx.moveTo(ax, cy); ctx.quadraticCurveTo(mx, my, bx, cy); ctx.stroke(); }
+    ctx.restore();
+    img(tr.a, ax, s); img(tr.b, bx, s);
+    label(tr.fromName || '', ax); label(tr.toName || '', bx);
+    const p = 0.12 + u * 0.76, [vx, vy] = bez(p), [nx, ny] = bez(Math.min(1, p + 0.01)), ang = Math.atan2(ny - vy, nx - vx);
+    ctx.save(); ctx.translate(vx, vy); ctx.rotate(ang); ctx.scale(k, k);
+    if (tr.rail) {
+      ctx.fillStyle = '#f1f4f7'; ctx.beginPath(); ctx.moveTo(-34, -6); ctx.lineTo(18, -6); ctx.quadraticCurveTo(30, -6, 34, 0); ctx.quadraticCurveTo(30, 6, 18, 6); ctx.lineTo(-34, 6); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = tr.color || '#e4572e'; ctx.fillRect(-34, 2.5, 60, 2.5);
+      ctx.fillStyle = '#5fb0c9'; for (let i = 0; i < 6; i++) ctx.fillRect(-30 + i * 8, -3.5, 5, 4);
+    } else {
+      ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(4, 22, 16, 3, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#f4f6f8';
+      ctx.beginPath(); ctx.ellipse(0, 0, 20, 4.2, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-2, 0); ctx.lineTo(-10, -17); ctx.lineTo(-5, -17); ctx.lineTo(8, 0); ctx.lineTo(-5, 17); ctx.lineTo(-10, 17); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = tr.color || '#e4572e'; ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(-21, -8); ctx.lineTo(-17, -8); ctx.lineTo(-11, 0); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#5fb0c9'; ctx.beginPath(); ctx.ellipse(15, -1, 3.5, 1.8, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+    return true;
+  };
+
   R.draw = function () {
+    if (this.trip && this.drawTrip()) return;
     const ctx = this.ctx, S = this.state, t = this.t;
     NIGHT = !!this.night; FLOOD = false; TRIM = S && S.color2 ? S.color2 : '#eef1f4';
     ctx.setTransform(1, 0, 0, 1, 0, 0);

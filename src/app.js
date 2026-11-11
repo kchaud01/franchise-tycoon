@@ -425,7 +425,7 @@
       const endDrag = () => { drag = null; };
       cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
       cv.addEventListener('pointerleave', () => { renderer.hover = null; });
-      cv.addEventListener('click', (e) => { if (moved) { moved = false; return; } if (visiting != null) { const vr = boardRows().find((x) => x.rid === visiting), vd = vr && districtOf(vr), vk = pick(e); if (vd && vk && vd.grid[vk]) playMini(vd.grid[vk].type, { color: vd.color, name: vr.name }); return; } const k = pick(e); selected = k; setup.confirm = null; if (k) tab = 'build'; render(); });
+      cv.addEventListener('click', (e) => { if (moved) { moved = false; return; } if (renderer.trip) return; if (visiting != null) { const vr = boardRows().find((x) => x.rid === visiting), vd = vr && districtOf(vr), vk = pick(e); if (vd && vk && vd.grid[vk]) playMini(vd.grid[vk].type, { color: vd.color, name: vr.name }); return; } const k = pick(e); selected = k; setup.confirm = null; if (k) tab = 'build'; render(); });
       cv.addEventListener('wheel', (e) => {
         if (document.documentElement.scrollHeight > window.innerHeight + 2) return; // stacked phone layout: let the page scroll
         e.preventDefault(); const b = cv.getBoundingClientRect();
@@ -726,6 +726,23 @@
     return h;
   }
 
+  /** Change the city on screen with a journey: zoom out, cross the map, zoom in on the other city.
+      dest = a roster id to visit, or null for home. Rail-linked cities travel by train, the rest by air. */
+  function travelTo(dest) {
+    if (dest === visiting) return;
+    const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const nameOf = (rid) => (rid == null || rid === S.rid ? S.name : FT.teamName(L, rid));
+    const linksOf = (rid) => { if (rid == null || rid === S.rid) return S.links || []; const row = boardRows().find((x) => x.rid === rid); return (row && row.links) || (S.rivals && S.rivals[rid] && S.rivals[rid].links) || []; };
+    const from = visiting, a = still || !renderer ? null : renderer.snapshot();
+    visiting = dest; selected = null;
+    renderer.resetView(); render();
+    if (!a) return;
+    const fr = from == null ? S.rid : from, to = dest == null ? S.rid : dest;
+    renderer.travel(a, renderer.snapshot(), { fromName: nameOf(from), toName: nameOf(dest), rail: linksOf(fr).indexOf(to) >= 0, color: renderer.state.color || S.color });
+    // the 'Visiting' banner arrives with you, not before you leave
+    const vb = $('#visit'); vb.classList.add('intrip'); clearTimeout(travelTo.timer);
+    travelTo.timer = setTimeout(() => vb.classList.remove('intrip'), renderer.trip.dur * 0.8);
+  }
   function syncTouch() { $('#city').style.touchAction = renderer.zoom > 1.05 ? 'none' : 'manipulation'; }
 
   // ---- actions --------------------------------------------------------------------------
@@ -736,9 +753,9 @@
     back() { setup.step = setup.step === 'team' || setup.step === 'lgconfirm' ? 'leagues' : setup.step === 'leagues' && setup.forLeague ? 'lguser' : 'start'; if (setup.step === 'start') setup.forLeague = false; setup.error = ''; renderSetup(); },
     begin() { setup.league.myRosterId = +$('#team').value; begin(setup.league, setup.conn); },
     tab(v) { tab = v; if (v === 'build' || v === 'game') visiting = null; render(); },
-    visit(v) { visiting = +v; selected = null; renderer.resetView(); render(); },
-    visitstep(v) { const rows = boardRows().filter((x) => !x.me), i = rows.findIndex((x) => x.rid === visiting); visiting = rows[(i + +v + rows.length) % rows.length].rid; render(); },
-    gohome() { visiting = null; render(); },
+    visit(v) { travelTo(+v); },
+    visitstep(v) { const rows = boardRows().filter((x) => !x.me), i = rows.findIndex((x) => x.rid === visiting); travelTo(rows[(i + +v + rows.length) % rows.length].rid); },
+    gohome() { travelTo(null); },
     price(v) { if (LG) return lact({ a: 'price', v: +v }); S.price = +v; save(); render(); },
     promo(v) { if (LG) return lact({ a: 'promo', v }); S.promo = v; save(); render(); },
     play() {

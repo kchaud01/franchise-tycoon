@@ -51,6 +51,8 @@ const assert = require('assert');
     assert.strictEqual(JSON.stringify(await page.evaluate(() => window.FTApp.state.mini || {})), before, 'visitor play records nothing');
   }
   await page.click('[data-act="gohome"]');
+  await page.waitForFunction(() => !window.FTApp.renderer.trip, null, { timeout: 5000 });
+  assert(await page.evaluate(() => window.FTApp.renderer.state === window.FTApp.state), 'the journey home ends in your own city');
   // Sleeper path: an unknown username gives a readable error (needs network)
   await page.click('#btn-menu'); await page.click('#btn-switch');
   await page.fill('#username', 'zz_no_such_user_zz_9182'); await page.click('#connect button');

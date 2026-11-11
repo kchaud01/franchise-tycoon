@@ -313,7 +313,7 @@ function createApp(opts) {
         data = FT.demoLeague(2026, 9); adminRid = 1;
       } else {
         if (!/^\d{6,24}$/.test(String(body.leagueId || ''))) throw fail(400, 'Missing Sleeper league.');
-        if (Object.values(db.leagues).some((l) => l.data.leagueId === String(body.leagueId))) throw fail(409, 'This Sleeper league already has a league-mode season here. Use your commissioner link.');
+        if (Object.values(db.leagues).some((l) => l.data.leagueId === String(body.leagueId))) throw fail(409, 'This Sleeper league already has a league-mode season here. Open this site in the browser you created it from to get back in, or use your commissioner link. Lost it? The README explains how to recover it from the league data.');
         data = await provider.load(String(body.leagueId), String(body.userId || ''));
         adminRid = data.myRosterId != null ? data.myRosterId : data.teams[0].rosterId;
       }
