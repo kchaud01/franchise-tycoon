@@ -44,6 +44,21 @@ const rejects = async (p, status) => { try { await p; } catch (e) { assert.stric
   console.log('week 10 visiting-fan cuts:', hosts.map((h) => h + ':' + Math.round(c10[h].pct * 100) + '%').join(' '));
   console.log('week 10 table:', tb.rows.map((r) => r.rid + ':' + r.edge + '%/+' + r.bonus).join('  '));
 
+  // score sheet: week 11 carries the week 10 bonuses; the commissioner can overrule any of them
+  assert(v.board.every((x) => typeof x.net === 'number' && typeof x.gross === 'number'), 'season ledger on the board');
+  let sh = v.sheet[11]; assert(sh && !sh.final && sh.rows.length === 10);
+  const mine = sh.rows.find((r) => r.rid === v.S.rid);
+  assert.strictEqual(mine.bonus, 5); assert.strictEqual(mine.adj, Math.round((mine.raw + 5) * 100) / 100);
+  await rejects(app.api('POST', U('/api/act?t=' + owner), { a: 'override', week: 11, v: { [v.S.rid]: 0 } }), 400);
+  await rejects(app.api('POST', U('/api/act?t=' + admin), { a: 'override', week: 11, v: { [v.S.rid]: 99 } }), 400);
+  v = await app.api('POST', U('/api/act?t=' + admin), { a: 'override', week: 11, v: { [v.S.rid]: 2.5 } });
+  sh = v.sheet[11].rows.find((r) => r.rid === v.S.rid);
+  assert(sh.edited && sh.bonus === 2.5 && sh.calc === 5);
+  o = await app.api('GET', U('/api/state?t=' + owner), {});
+  assert.strictEqual(o.sheet[11].rows.find((r) => r.rid === v.S.rid).bonus, 2.5, 'owners see the commissioner edit');
+  v = await app.api('POST', U('/api/act?t=' + admin), { a: 'override', week: 11, v: { [v.S.rid]: null } });
+  assert(!v.sheet[11].rows.find((r) => r.rid === v.S.rid).edited);
+
   v = await app.api('POST', U('/api/act?t=' + admin), { a: 'settings', v: { cap: 8, travelCut: 0.2, payout: 'top3', playoffStart: 13, lastWeek: 14, lockDay: 0, lockHour: 13 } });
   assert.deepStrictEqual([v.settings.cap, v.settings.payout, v.settings.playoffStart, v.settings.lastWeek, v.settings.lockDay], [8, 'top3', 13, 14, 0]);
   assert.strictEqual(v.league.lastWeek, 14);
@@ -74,5 +89,13 @@ const rejects = async (p, status) => { try { await p; } catch (e) { assert.stric
   s = await app2.api('GET', U('/api/state?t=' + t2), {});
   assert.strictEqual(s.week, 11); assert(s.bonus[10]); assert.strictEqual(s.phase, 'open');
   assert.strictEqual(s.S.price, 2, 'the locked-in price was the one used');
+  // sim-only format: no bonuses, no score sheet, a prize and a ledger scoreboard instead
+  const app3 = createApp({ demo: true });
+  const a3 = (await app3.api('POST', U('/api/leagues'), { demo: true })).token;
+  let z = await app3.api('POST', U('/api/act?t=' + a3), { a: 'settings', v: { mode: 'sim', simMetric: 'value', prize: '  Winner picks the draft order\n ' } });
+  assert.deepStrictEqual([z.settings.mode, z.settings.simMetric, z.settings.prize], ['sim', 'value', 'Winner picks the draft order']);
+  z = await app3.api('POST', U('/api/act?t=' + a3), { a: 'demoFinish' });
+  assert(!z.bonus[10].paid && z.bonus[10].rows.every((r) => r.bonus === 0)); assert.deepStrictEqual(z.sheet, {});
+  assert(z.bonus[10].rows.length === 10, 'edge is still reported');
   console.log('league server ok');
 })().catch((e) => { console.error(e); process.exit(1); });

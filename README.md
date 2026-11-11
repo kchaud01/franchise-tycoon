@@ -44,6 +44,13 @@ A `Dockerfile` is included for hosts that deploy from one.
 4. When Sleeper finalizes the week, every franchise settles at once and the Bonus tab posts the table.
 5. The commissioner adds those points to the following week's scores in Sleeper. The Bonus tab shows that week's matchups with bonuses applied and flags any result the bonus changes.
 
+### Two league formats
+
+The commissioner picks one on the Admin tab and can change it later.
+
+- **Sim standings only.** Fantasy scores are never touched. The season ledger (revenue, costs, profit) is the scoreboard, ranked by season profit or franchise value, and the commissioner can name a prize for the sim champion.
+- **Bonus points.** The sim awards a capped, sliding-scale bonus each week. The Admin tab has a score sheet that works out every team's new score, lets the commissioner change any bonus, and copies the list to enter in Sleeper. Sleeper's API is read-only, so entering them is always manual.
+
 ### How bonus points are decided
 
 Each owner is compared with an auto-pilot owner who had the same fantasy result that week. The **edge** is how much more the owner's franchise earned than that auto-pilot, as a percentage. Ranking by edge rewards sim decisions and not the fantasy score. The sim always runs on raw Sleeper scores, so bonuses never feed back into it.

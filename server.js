@@ -19,12 +19,15 @@ const SYNC_MS = 4 * 60 * 1000;
 const PAYOUTS = ['all', 'half', 'top3'];
 /** League settings the commissioner can change. Defaults come from Sleeper where Sleeper knows the answer. */
 function defaultSettings(data) {
-  return { cap: 5, travelCut: 0.5, payout: 'all', playoffStart: data.playoffStart || 15, lastWeek: data.lastWeek || 17, playoffBonus: false, miniBoost: true, lockDay: 4, lockHour: 20 };
+  return { mode: 'bonus', simMetric: 'net', prize: '', cap: 5, travelCut: 0.5, payout: 'all', playoffStart: data.playoffStart || 15, lastWeek: data.lastWeek || 17, playoffBonus: false, miniBoost: true, lockDay: 4, lockHour: 20 };
 }
 function cleanSettings(base, inp) {
   const s = Object.assign({}, base), int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
   if (typeof inp.cap === 'number' && inp.cap >= 0 && inp.cap <= 25) s.cap = Math.round(inp.cap * 2) / 2;
   if (typeof inp.travelCut === 'number' && inp.travelCut >= 0 && inp.travelCut <= 0.75) s.travelCut = Math.round(inp.travelCut * 20) / 20;
+  if (inp.mode === 'bonus' || inp.mode === 'sim') s.mode = inp.mode;
+  if (inp.simMetric === 'net' || inp.simMetric === 'value') s.simMetric = inp.simMetric;
+  if (typeof inp.prize === 'string') s.prize = inp.prize.replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 140);
   if (PAYOUTS.indexOf(inp.payout) >= 0) s.payout = inp.payout;
   if (int(inp.lastWeek, 1, 18)) s.lastWeek = inp.lastWeek;
   if (int(inp.playoffStart, 2, 19)) s.playoffStart = inp.playoffStart;
@@ -117,7 +120,7 @@ function createApp(opts) {
         rows.push({ rid: +id, net: rep.net, twinNet: twinRep.net, twinGross: twinRep.gross });
       }
       // bonuses from this week are added to next week's fantasy score, so the playoff rule looks one week ahead
-      const paid = lg.settings.playoffBonus || lg.week + 1 < lg.settings.playoffStart;
+      const paid = lg.settings.mode !== 'sim' && (lg.settings.playoffBonus || lg.week + 1 < lg.settings.playoffStart);
       lg.bonus[lg.week] = { cap: paid ? lg.settings.cap : 0, payout: lg.settings.payout, paid, rows: FT.bonusTable(rows, paid ? lg.settings.cap : 0, lg.settings.payout) };
       lg.cut = lg.cut || {}; lg.cut[lg.week] = cut;
       lg.week++; lg.demoLocked = false; changed = true;
@@ -148,6 +151,29 @@ function createApp(opts) {
     throw fail(401, 'This league link is not valid. Ask your commissioner for a new one.');
   }
 
+  /** The commissioner's score sheet: for every week that carries bonuses, each team's raw Sleeper score, the bonus
+      it brings (after any visiting-fan cut, or the commissioner's own edit) and the resulting score. */
+  function sheets(lg) {
+    const out = {};
+    for (const w in lg.bonus) {
+      const W = +w + 1, wk = lg.data.weeks[W], tb = lg.bonus[w];
+      if (!wk || !tb.paid) continue;
+      const cuts = (lg.cut || {})[W], ov = (lg.override || {})[W] || {}, by = {};
+      tb.rows.forEach((r) => {
+        const c = cuts && cuts[r.rid], calc = c ? Math.round(r.bonus * (1 - c.pct) * 10) / 10 : r.bonus;
+        by[r.rid] = { earned: r.bonus, cut: c ? c.pct : 0, calc, bonus: ov[r.rid] != null ? ov[r.rid] : calc, edited: ov[r.rid] != null };
+      });
+      out[W] = {
+        final: !!wk.complete && !!cuts,
+        rows: Object.keys(wk.teams).map((id) => {
+          const b = by[id] || { earned: 0, cut: 0, calc: 0, bonus: 0, edited: false }, raw = wk.teams[id].pts;
+          return Object.assign({ rid: +id, opp: FT.opponentOf(wk, +id), raw, adj: Math.round((raw + b.bonus) * 100) / 100 }, b);
+        }),
+      };
+    }
+    return out;
+  }
+
   function view(lg, who, origin) {
     const through = lg.week - 1;
     const st = FT.standings(lg.data, through);
@@ -155,11 +181,11 @@ function createApp(opts) {
     const S = Object.assign({}, me.f, { name: FT.teamName(lg.data, who.rid), v: 1 });
     const board = Object.keys(lg.teams).map((id) => {
       const f = lg.teams[id].f, s = st[id] || { w: 0, l: 0, t: 0 };
-      return { rid: +id, me: +id === who.rid, name: FT.teamName(lg.data, +id), value: FT.value(f), fans: f.fans, stadium: f.stadium, lots: Object.keys(f.grid).length, district: { grid: f.grid, stadium: f.stadium, color: f.color, fill: Math.min(1, FT.forecast(f).attendance / FT.forecast(f).capacity) }, record: s.w + '-' + s.l + (s.t ? '-' + s.t : '') };
+      return { rid: +id, me: +id === who.rid, name: FT.teamName(lg.data, +id), value: FT.value(f), fans: f.fans, stadium: f.stadium, lots: Object.keys(f.grid).length, gross: f.history.reduce((a, r) => a + r.gross, 0), net: f.history.reduce((a, r) => a + r.net, 0), district: { grid: f.grid, stadium: f.stadium, color: f.color, fill: Math.min(1, FT.forecast(f).attendance / FT.forecast(f).capacity) }, record: s.w + '-' + s.l + (s.t ? '-' + s.t : '') };
     }).sort((a, b) => b.value - a.value);
     const v = {
       leagueMode: true, league: Object.assign({}, lg.data, { myRosterId: who.rid }), S, admin: !!who.admin, cap: lg.settings.cap, settings: lg.settings,
-      week: lg.week, startWeek: lg.startWeek, phase: phase(lg), lockAt: lockAt(lg.data, lg.week, lg.settings), now: now(), board, bonus: lg.bonus, cut: lg.cut || {},
+      week: lg.week, startWeek: lg.startWeek, phase: phase(lg), lockAt: lockAt(lg.data, lg.week, lg.settings), now: now(), board, sheet: sheets(lg), bonus: lg.bonus, cut: lg.cut || {},
       syncedAt: lg.syncedAt, demo: lg.data.source !== 'sleeper',
     };
     const mu = FT.matchup(lg.data, lg.week, who.rid);
@@ -188,6 +214,18 @@ function createApp(opts) {
         break;
       }
       case 'color': must(/^#[0-9a-f]{6}$/i.test(b.v), 'Unknown colour.'); f.color = b.v; break;
+      case 'override': { // the commissioner's own number for one team's bonus in one week; null goes back to the calculated value
+        must(who.admin, 'Only the commissioner can edit score adjustments.');
+        const W = +b.week; must(Number.isInteger(W) && lg.bonus[W - 1], 'There is no bonus table for that week.');
+        must(b.v && typeof b.v === 'object', 'Missing adjustments.');
+        lg.override = lg.override || {}; const o = (lg.override[W] = lg.override[W] || {});
+        for (const id in b.v) {
+          must(lg.teams[id], 'Unknown team.');
+          if (b.v[id] === null) delete o[id];
+          else { must(typeof b.v[id] === 'number' && b.v[id] >= 0 && b.v[id] <= 50, 'An adjustment must be between 0 and 50 points.'); o[id] = Math.round(b.v[id] * 10) / 10; }
+        }
+        break;
+      }
       case 'settings': must(who.admin, 'Only the commissioner can change league settings.'); must(b.v && typeof b.v === 'object', 'Missing settings.'); lg.settings = cleanSettings(lg.settings, b.v); applySettings(lg); break;
       case 'demoLock': must(who.admin && lg.data.source !== 'sleeper', 'Demo leagues only.'); lg.demoLocked = true; break;
       case 'demoFinish': must(who.admin && lg.data.source !== 'sleeper', 'Demo leagues only.'); FT.setDemoWeek(lg.data, lg.data.demoThrough + 1); settleReady(lg); break;

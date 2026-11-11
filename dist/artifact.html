@@ -190,6 +190,8 @@ tr.me td:first-child { box-shadow: inset 3px 0 0 var(--team); }
 .adj em { font-style: normal; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .adj p { grid-column: 1 / -1; color: var(--gold); font-size: 13px; }
 .adj.flip b { color: var(--gold); }
+input.ov { width: 64px; flex: none; display: inline-block; padding: 3px 6px; font-size: 13px; }
+p.won { margin: 0; }
 
 /* mini-games */
 .mini { z-index: 30; }
@@ -2722,7 +2724,7 @@ tr.me td:first-child { box-shadow: inset 3px 0 0 var(--team); }
     } else if (setup.step === 'lgconfirm') {
       const lg = setup.league;
       h = '<p class="lede"><b>' + esc(lg.name) + '</b> · ' + lg.teams.length + ' teams. Check the league rules, then create the season. You can change all of this later on the Admin tab.</p>' +
-        settingsForm({ cap: 5, travelCut: 0.5, payout: 'all', playoffStart: lg.playoffStart, lastWeek: lg.lastWeek, playoffBonus: false, lockDay: 4, lockHour: 20 }, null) +
+        settingsForm({ mode: 'bonus', simMetric: 'net', prize: '', cap: 5, travelCut: 0.5, payout: 'all', playoffStart: lg.playoffStart, lastWeek: lg.lastWeek, playoffBonus: false, lockDay: 4, lockHour: 20 }, null) +
         (server && server.needsKey ? '<div class="field"><label for="lg-key">Server key</label><input id="lg-key" type="password" autocomplete="off"></div>' : '') +
         (setup.error ? '<p class="error" role="alert">' + esc(setup.error) + '</p>' : '') +
         '<div class="row end"><button class="btn ghost" data-act="back">Back</button><button class="btn primary" data-act="lgcreate"' + (busy ? ' disabled' : '') + '>Create league season</button></div>';
@@ -2823,8 +2825,8 @@ tr.me td:first-child { box-shadow: inset 3px 0 0 var(--team); }
   /** Travelling support for the game on screen. t = {in} when hosting, {out} when away. */
   function travelLine(t) {
     if (!t) return '';
-    if (t.out != null) return '<p class="fine">About <b>' + num(t.out) + '</b> of your fans will travel. They sell road merchandise, lift hype' + (LG ? ', and every seat they take cuts the bonus your opponent can use against you' : '') + '. Hype, a Transit Hub and a win streak send more.</p>';
-    return '<p class="fine">Up to <b>' + num(t.in) + '</b> visiting fans want in. They only get seats your own crowd leaves empty' + (LG ? ', and each one cuts the bonus you bring into this matchup. A full house keeps them out' : '') + '.</p>';
+    if (t.out != null) return '<p class="fine">About <b>' + num(t.out) + '</b> of your fans will travel. They sell road merchandise, lift hype' + (bonusMode() ? ', and every seat they take cuts the bonus your opponent can use against you' : '') + '. Hype, a Transit Hub and a win streak send more.</p>';
+    return '<p class="fine">Up to <b>' + num(t.in) + '</b> visiting fans want in. They only get seats your own crowd leaves empty' + (bonusMode() ? ', and each one cuts the bonus you bring into this matchup. A full house keeps them out' : '') + '.</p>';
   }
   function soloTravel(r) {
     const opp = S.rivals && S.rivals[r.oppId];
@@ -3012,10 +3014,10 @@ tr.me td:first-child { box-shadow: inset 3px 0 0 var(--team); }
     const dh = rep.hype[1] - rep.hype[0], df = rep.fans[1] - rep.fans[0];
     h += '<div class="deltas"><div><span>Hype</span><b class="' + (dh >= 0 ? 'good' : 'bad') + '">' + Math.round(rep.hype[0]) + ' → ' + Math.round(rep.hype[1]) + '</b><ul>' + rep.hypeLines.map((x) => '<li><em class="' + (x.d >= 0 ? 'good' : 'bad') + '">' + (x.d >= 0 ? '+' : '') + x.d.toFixed(1) + '</em> ' + esc(x.label) + '</li>').join('') + '</ul></div>' +
       '<div><span>Fanbase</span><b class="' + (df >= 0 ? 'good' : 'bad') + '">' + (df >= 0 ? '+' : '') + num(df) + '</b><ul><li>Now ' + num(rep.fans[1]) + ' fans</li></ul></div></div>';
-    const myCut = LG && LG.view.cut[r.week] && LG.view.cut[r.week][S.rid];
+    const myCut = bonusMode() && LG.view.cut[r.week] && LG.view.cut[r.week][S.rid];
     if (myCut) h += '<div class="won"><p><b>' + num(myCut.visitors) + ' visiting fans</b> from ' + esc(FT.teamName(L, myCut.from)) + ' got seats. Your bonus for this matchup is cut by <em>' + Math.round(myCut.pct * 100) + '%</em>.</p></div>';
     const tb = LG && LG.view.bonus[r.week], row = tb && tb.rows.find((x) => x.rid === S.rid);
-    if (row) h += '<div class="won"><p><b>Owner edge ' + (row.edge >= 0 ? '+' : '') + row.edge.toFixed(1) + '%</b> against your auto-pilot, ' + (tb.rows.indexOf(row) + 1) + ' of ' + tb.rows.length + ' in the league. <em>+' + row.bonus.toFixed(1) + ' bonus points</em> for Week ' + (r.week + 1) + '.</p></div>';
+    if (row) h += '<div class="won"><p><b>Owner edge ' + (row.edge >= 0 ? '+' : '') + row.edge.toFixed(1) + '%</b> against your auto-pilot, ' + (tb.rows.indexOf(row) + 1) + ' of ' + tb.rows.length + ' in the league.' + (bonusMode() ? ' <em>+' + row.bonus.toFixed(1) + ' bonus points</em> for Week ' + (r.week + 1) + '.' : '') + '</p></div>';
     if (rep.badges.length) h += '<div class="won">' + rep.badges.map((b) => '<p><b>Milestone: ' + esc(b.name) + '</b> <em>+' + money(b.reward) + '</em></p>').join('') + '</div>';
     return h + '<button class="btn primary big" data-act="close">Back to the district</button>';
   }
@@ -3032,7 +3034,7 @@ tr.me td:first-child { box-shadow: inset 3px 0 0 var(--team); }
     document.documentElement.style.setProperty('--team', S.color);
     document.querySelectorAll('.tabs button').forEach((b) => { const on = b.dataset.v === tab; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
     if ((tab === 'bonus' && !LG) || (tab === 'admin' && !(LG && LG.view.admin))) tab = 'game';
-    $('#tab-bonus').hidden = !LG; $('#tab-admin').hidden = !(LG && LG.view.admin);
+    $('#tab-bonus').hidden = !LG; $('#tab-bonus').textContent = LG && !bonusMode() ? 'Standings' : 'Bonus'; $('#tab-admin').hidden = !(LG && LG.view.admin);
     $('#btn-switch').hidden = $('#btn-reset').hidden = !!LG; $('#btn-leave').hidden = !LG;
     $('#panel').innerHTML = tab === 'game' ? viewGame() : tab === 'build' ? viewBuild() : tab === 'league' ? viewLeague() : tab === 'bonus' ? viewBonus() : tab === 'admin' ? viewAdmin() : viewLedger();
     const away = visitBanner();
@@ -3168,9 +3170,45 @@ tr.me td:first-child { box-shadow: inset 3px 0 0 var(--team); }
     return 'Franchise Tycoon bonus points, earned in Week ' + w + ', added to Week ' + (w + 1) + ' scores\n' +
       tb.rows.map((r, i) => (i + 1) + '. ' + FT.teamName(L, r.rid) + ': +' + r.bonus.toFixed(1)).join('\n');
   }
+  const bonusMode = () => !!LG && LG.view.settings.mode !== 'sim';
+  /** The sim scoreboard: every owner's season ledger since league mode began. */
+  function standingsCard() {
+    const V = LG.view, byValue = V.settings.simMetric === 'value';
+    const rows = V.board.slice().sort((a, b) => (byValue ? b.value - a.value : b.net - a.net));
+    const done = V.phase === 'done', lead = rows[0];
+    return '<div class="card"><div class="kicker">Sim standings</div><h2>' + (done ? 'Champion: ' + esc(lead.name) : 'Season ledger') + '</h2>' +
+      '<p class="fine">Ranked by ' + (byValue ? 'franchise value' : 'season profit: everything earned minus everything spent on upkeep, payroll and promotions') + ' since Week ' + V.startWeek + '.' + (bonusMode() ? '' : ' Fantasy scores are not affected.') + '</p>' +
+      (V.settings.prize ? '<p class="won"><b>Prize for the sim champion:</b> ' + esc(V.settings.prize) + '</p>' : '') +
+      '<div class="scroll"><table><thead><tr><th>#</th><th>Owner</th><th>Revenue</th><th>Costs</th><th>' + (byValue ? 'Value' : 'Profit') + '</th></tr></thead><tbody>' +
+      rows.map((x, i) => '<tr class="' + (x.me ? 'me' : '') + '"><td>' + (i + 1) + '</td><td>' + esc(x.name) + '</td><td>' + money(x.gross) + '</td><td>' + money(x.gross - x.net) + '</td><td><b>' + money(byValue ? x.value : x.net) + '</b></td></tr>').join('') +
+      '</tbody></table></div></div>';
+  }
+  /** Matchups for one week with bonuses applied. The commissioner's copy (edit = true) has an input per team. */
+  function sheetCard(W, edit) {
+    const sh = LG.view.sheet[W];
+    if (!sh) return '';
+    const by = {}; sh.rows.forEach((r) => (by[r.rid] = r));
+    const seen = {}, blocks = [];
+    const note = (r) => (r.edited ? ' (commissioner edit, calculated ' + r.calc.toFixed(1) + ')' : r.cut && r.earned ? ' (' + r.earned.toFixed(1) + ' less ' + Math.round(r.cut * 100) + '% for visiting fans)' : '');
+    sh.rows.forEach((a) => {
+      const b = by[a.opp];
+      if (!b || seen[a.rid] || seen[b.rid]) return;
+      seen[a.rid] = seen[b.rid] = 1;
+      const flip = sh.final && Math.sign(a.raw - b.raw) !== Math.sign(a.adj - b.adj);
+      const side = (r) => '<div><span>' + esc(FT.teamName(L, r.rid)) + '</span><b>' + r.adj.toFixed(2) + '</b><em>' + r.raw.toFixed(2) + ' + ' +
+        (edit ? '<input class="ov" type="number" min="0" max="50" step="0.1" id="ov-' + r.rid + '" data-rid="' + r.rid + '" data-calc="' + r.calc + '" value="' + r.bonus.toFixed(1) + '" aria-label="Bonus for ' + esc(FT.teamName(L, r.rid)) + '">' : r.bonus.toFixed(1)) + (edit ? '' : note(r)) + '</em></div>';
+      blocks.push('<div class="adj' + (flip ? ' flip' : '') + '">' + side(a) + side(b) + (flip ? '<p>The bonus changes the winner of this matchup.</p>' : '') + '</div>');
+    });
+    const text = 'Week ' + W + ' bonus points to add in Sleeper\n' + sh.rows.filter((r) => r.opp != null).map((r) => FT.teamName(L, r.rid) + ': +' + r.bonus.toFixed(1) + ' (new score ' + r.adj.toFixed(2) + ')').join('\n');
+    return '<div class="card"><h3>Week ' + W + ' scores with bonuses · ' + (sh.final ? 'Final' : 'Not final yet') + '</h3>' + blocks.join('') +
+      '<p class="fine">Raw Sleeper score plus bonus gives the new score. ' + (sh.final ? '' : 'Scores and visiting-fan cuts can still change until Week ' + W + ' settles, so enter these after it does. ') + 'The sim itself always runs on the raw scores.</p>' +
+      (edit ? '<div class="row"><button class="btn primary" data-act="saveov" data-v="' + W + '">Save adjustments</button><button class="btn ghost" data-act="resetov" data-v="' + W + '">Use calculated values</button></div>' : '') +
+      '<button class="btn ghost wide" data-act="copy" data-v="' + esc(text) + '">Copy adjustments for Sleeper</button></div>';
+  }
   function viewBonus() {
     const V = LG.view, weeks = Object.keys(V.bonus).map(Number).sort((a, b) => a - b);
-    let h = '<div class="card"><h3>How bonus points work</h3><p class="fine">Each week your franchise is compared with an auto-pilot owner who had your exact fantasy result. Your <b>edge</b> is how much more (or less) you earned than that auto-pilot, so it measures your decisions and not your fantasy score. The best edge earns <b>' + V.cap + '</b> points, sliding down across ' + payoutText(V.settings.payout) + '.' + (V.settings.travelCut ? ' When you host, visiting fans who get seats can cut the bonus you use that week by up to ' + Math.round(V.settings.travelCut * 100) + '%.' : '') + ' The commissioner adds them to next week\'s score in Sleeper.</p></div>';
+    if (!bonusMode()) return standingsCard() + '<div class="card"><h3>How the sim is scored</h3><p class="fine">Your league plays the sim on its own. Nothing here changes a fantasy score. Each week the table below still shows your <b>edge</b>: how much more you earned than an auto-pilot owner with the same fantasy result.</p></div>' + edgeCard(weeks);
+    let h = standingsCard() + '<div class="card"><h3>How bonus points work</h3><p class="fine">Each week your franchise is compared with an auto-pilot owner who had your exact fantasy result. Your <b>edge</b> is how much more (or less) you earned than that auto-pilot, so it measures your decisions and not your fantasy score. The best edge earns <b>' + V.cap + '</b> points, sliding down across ' + payoutText(V.settings.payout) + '.' + (V.settings.travelCut ? ' When you host, visiting fans who get seats can cut the bonus you use that week by up to ' + Math.round(V.settings.travelCut * 100) + '%.' : '') + ' The commissioner adds them to next week\'s score in Sleeper.</p></div>';
     if (!weeks.length) return h + '<div class="card"><h3>No table yet</h3><p>The first bonus table posts when Week ' + V.week + ' settles.</p></div>';
     const w = weeks.indexOf(LG.bonusWeek) >= 0 ? LG.bonusWeek : weeks[weeks.length - 1], tb = V.bonus[w], i = weeks.indexOf(w);
     h += '<div class="card"><div class="weeknav"><button class="btn ghost small" data-act="bonusweek" data-v="' + weeks[i - 1] + '"' + (i > 0 ? '' : ' disabled') + ' aria-label="Earlier week">‹</button><h3>Earned in Week ' + w + ' · applies to Week ' + (w + 1) + '</h3><button class="btn ghost small" data-act="bonusweek" data-v="' + weeks[i + 1] + '"' + (i < weeks.length - 1 ? '' : ' disabled') + ' aria-label="Later week">›</button></div>' +
@@ -3178,34 +3216,26 @@ tr.me td:first-child { box-shadow: inset 3px 0 0 var(--team); }
       '<div class="scroll"><table><thead><tr><th>#</th><th>Owner</th><th>Net</th><th>Auto-pilot</th><th>Edge</th><th>Bonus</th></tr></thead><tbody>' +
       tb.rows.map((r, n) => '<tr class="' + (r.rid === S.rid ? 'me' : '') + '"><td>' + (n + 1) + '</td><td>' + esc(FT.teamName(L, r.rid)) + '</td><td>' + money(r.net) + '</td><td>' + money(r.twinNet) + '</td><td class="' + (r.edge >= 0 ? 'good' : 'bad') + '">' + (r.edge >= 0 ? '+' : '') + r.edge.toFixed(1) + '%</td><td><b>+' + r.bonus.toFixed(1) + '</b></td></tr>').join('') +
       '</tbody></table></div><button class="btn ghost wide" data-act="copy" data-v="' + esc(bonusText(w, tb)) + '">Copy table for the league chat</button></div>';
-    // next week's matchups with the bonus applied, for the commissioner to enter
-    const wk = L.weeks[w + 1], bonusOf = {}, cuts = V.cut[w + 1], cutNote = {};
-    tb.rows.forEach((r) => {
-      const c = cuts && cuts[r.rid];
-      bonusOf[r.rid] = c ? Math.round(r.bonus * (1 - c.pct) * 10) / 10 : r.bonus;
-      if (c && r.bonus) cutNote[r.rid] = ' (' + r.bonus.toFixed(1) + ' less ' + Math.round(c.pct * 100) + '% for visiting fans)';
-    });
-    if (wk) {
-      const seen = {}, rows = [];
-      Object.keys(wk.teams).map(Number).forEach((a) => {
-        const b = FT.opponentOf(wk, a);
-        if (b == null || seen[a] || seen[b]) return;
-        seen[a] = seen[b] = 1;
-        const ra = wk.teams[a].pts, rb = wk.teams[b].pts, aa = ra + (bonusOf[a] || 0), ab = rb + (bonusOf[b] || 0);
-        const flip = wk.complete && Math.sign(ra - rb) !== Math.sign(aa - ab);
-        rows.push('<div class="adj' + (flip ? ' flip' : '') + '"><div><span>' + esc(FT.teamName(L, a)) + '</span><b>' + aa.toFixed(2) + '</b><em>' + ra.toFixed(2) + ' + ' + (bonusOf[a] || 0).toFixed(1) + (cutNote[a] || '') + '</em></div><div><span>' + esc(FT.teamName(L, b)) + '</span><b>' + ab.toFixed(2) + '</b><em>' + rb.toFixed(2) + ' + ' + (bonusOf[b] || 0).toFixed(1) + (cutNote[b] || '') + '</em></div>' + (flip ? '<p>The bonus changes the winner of this matchup.</p>' : '') + '</div>');
-      });
-      h += '<div class="card"><h3>Week ' + (w + 1) + ' scores with bonuses · ' + (wk.complete ? 'Final' : 'In progress') + '</h3>' + rows.join('') + '<p class="fine">Raw Sleeper score plus bonus. ' + (cuts ? 'Visiting-fan cuts are final.' : 'Visiting fans can still cut a home owner\'s bonus: that is decided when Week ' + (w + 1) + ' settles, so enter these after it does.') + ' The sim itself always runs on the raw scores.</p>' +
-        (cuts ? '<button class="btn ghost wide" data-act="copy" data-v="' + esc('Week ' + (w + 1) + ' bonus points to add in Sleeper\n' + tb.rows.map((r) => FT.teamName(L, r.rid) + ': +' + (bonusOf[r.rid] || 0).toFixed(1)).join('\n')) + '">Copy final adjustments</button>' : '') + '</div>';
-    }
-    return h;
+    return h + sheetCard(w + 1);
   }
 
+  /** Weekly edge table without bonus points, for leagues that play the sim on its own. */
+  function edgeCard(weeks) {
+    if (!weeks.length) return '';
+    const V = LG.view, w = weeks.indexOf(LG.bonusWeek) >= 0 ? LG.bonusWeek : weeks[weeks.length - 1], tb = V.bonus[w], i = weeks.indexOf(w);
+    return '<div class="card"><div class="weeknav"><button class="btn ghost small" data-act="bonusweek" data-v="' + weeks[i - 1] + '"' + (i > 0 ? '' : ' disabled') + ' aria-label="Earlier week">‹</button><h3>Week ' + w + ' owner edge</h3><button class="btn ghost small" data-act="bonusweek" data-v="' + weeks[i + 1] + '"' + (i < weeks.length - 1 ? '' : ' disabled') + ' aria-label="Later week">›</button></div>' +
+      '<div class="scroll"><table><thead><tr><th>#</th><th>Owner</th><th>Net</th><th>Auto-pilot</th><th>Edge</th></tr></thead><tbody>' +
+      tb.rows.map((r, n) => '<tr class="' + (r.rid === S.rid ? 'me' : '') + '"><td>' + (n + 1) + '</td><td>' + esc(FT.teamName(L, r.rid)) + '</td><td>' + money(r.net) + '</td><td>' + money(r.twinNet) + '</td><td class="' + (r.edge >= 0 ? 'good' : 'bad') + '">' + (r.edge >= 0 ? '+' : '') + r.edge.toFixed(1) + '%</td></tr>').join('') + '</tbody></table></div></div>';
+  }
   function settingsForm(s, teams) {
     const opt = (v, label, cur) => '<option value="' + v + '"' + (String(v) === String(cur) ? ' selected' : '') + '>' + label + '</option>';
     const weeksOpt = (lo, hi, cur) => { let o = ''; for (let w = lo; w <= hi; w++) o += opt(w, 'Week ' + w, cur); return o; };
     let hours = ''; for (let i = 0; i < 24; i++) hours += opt(i, hourLabel(i) + ' ET', s.lockHour);
-    return '<div class="field"><label for="set-cap">Maximum bonus points per week</label><div class="slider"><input type="range" id="set-cap" min="0" max="15" step="0.5" value="' + s.cap + '"><output id="set-cap-out" for="set-cap">' + (+s.cap).toFixed(1) + '</output></div><p class="fine">Set to 0 to run the sim with no effect on fantasy scores.</p></div>' +
+    const format = '<div class="field"><label for="set-mode">League format</label><select id="set-mode">' + opt('bonus', 'Bonus points: the sim adds to fantasy scores', s.mode) + opt('sim', 'Sim standings only: fantasy scores are never touched', s.mode) + '</select></div>' +
+      '<div class="pair"><div class="field"><label for="set-metric">Sim champion decided by</label><select id="set-metric">' + opt('net', 'Season profit', s.simMetric) + opt('value', 'Franchise value', s.simMetric) + '</select></div>' +
+      '<div class="field"><label for="set-prize">Prize for the sim champion</label><input id="set-prize" maxlength="140" placeholder="Optional, e.g. loser buys dinner" value="' + esc(s.prize || '') + '"></div></div>' +
+      '<p class="fine">The settings from here down to the playoff rule only matter in the bonus-points format.</p>';
+    return format + '<div class="field"><label for="set-cap">Maximum bonus points per week</label><div class="slider"><input type="range" id="set-cap" min="0" max="15" step="0.5" value="' + s.cap + '"><output id="set-cap-out" for="set-cap">' + (+s.cap).toFixed(1) + '</output></div><p class="fine">Set to 0 to run the sim with no effect on fantasy scores.</p></div>' +
       '<div class="field"><label for="set-cut">Most a visiting crowd can cut the home owner\'s bonus</label><div class="slider"><input type="range" id="set-cut" min="0" max="75" step="5" value="' + Math.round((s.travelCut == null ? 0.5 : s.travelCut) * 100) + '"><output id="set-cut-out" for="set-cut">' + Math.round((s.travelCut == null ? 0.5 : s.travelCut) * 100) + '%</output></div><p class="fine">Away fans who get seats reduce the bonus the home owner uses in that matchup. Set to 0 to turn this off.</p></div>' +
       '<div class="field"><label for="set-payout">Who earns bonus points</label><select id="set-payout">' + opt('all', 'Sliding scale: everyone above last place', s.payout) + opt('half', 'Sliding scale: top half only', s.payout) + opt('top3', 'Sliding scale: top three only', s.payout) + '</select></div>' +
       '<div class="pair"><div class="field"><label for="set-pstart">Playoffs start</label><select id="set-pstart">' + weeksOpt(10, 18, s.playoffStart) + '</select></div>' +
@@ -3217,13 +3247,19 @@ tr.me td:first-child { box-shadow: inset 3px 0 0 var(--team); }
       (teams != null ? '<p class="fine">Teams: <b>' + teams + '</b>, read from Sleeper. Playoff and season weeks start from what Sleeper reports; change them here if your league differs.</p>' : '');
   }
   function readSettings() {
-    return { cap: +$('#set-cap').value, travelCut: +$('#set-cut').value / 100, payout: $('#set-payout').value, playoffStart: +$('#set-pstart').value, lastWeek: +$('#set-last').value, miniBoost: $('#set-mini').checked, playoffBonus: $('#set-pbonus').checked, lockDay: +$('#set-lday').value, lockHour: +$('#set-lhour').value };
+    return { mode: $('#set-mode').value, simMetric: $('#set-metric').value, prize: $('#set-prize').value, cap: +$('#set-cap').value, travelCut: +$('#set-cut').value / 100, payout: $('#set-payout').value, playoffStart: +$('#set-pstart').value, lastWeek: +$('#set-last').value, miniBoost: $('#set-mini').checked, playoffBonus: $('#set-pbonus').checked, lockDay: +$('#set-lday').value, lockHour: +$('#set-lhour').value };
   }
   function viewAdmin() {
     const V = LG.view, base = location.origin + location.pathname + '#';
     let h = '<div class="card"><div class="kicker">Commissioner</div><h2>League settings</h2>' + settingsForm(V.settings, L.teams.length) +
       '<button class="btn primary wide" data-act="savesettings">Save settings</button><p class="fine">Changes apply from the next table. Tables already posted keep the rules they were scored under. League mode began in Week ' + V.startWeek + '.</p>' +
       (notice ? '<p class="fine notice" role="status">' + esc(notice) + '</p>' : '') + '</div>';
+    const sw = Object.keys(V.sheet).map(Number).sort((a, b) => a - b);
+    if (bonusMode() && sw.length) {
+      const W = sw.indexOf(LG.sheetWeek) >= 0 ? LG.sheetWeek : sw[sw.length - 1], i = sw.indexOf(W);
+      h += '<div class="card"><div class="kicker">Score sheet</div><div class="weeknav"><button class="btn ghost small" data-act="sheetweek" data-v="' + sw[i - 1] + '"' + (i > 0 ? '' : ' disabled') + ' aria-label="Earlier week">‹</button><h3>Week ' + W + '</h3><button class="btn ghost small" data-act="sheetweek" data-v="' + sw[i + 1] + '"' + (i < sw.length - 1 ? '' : ' disabled') + ' aria-label="Later week">›</button></div>' +
+        '<p class="fine">Every new score is worked out for you. Change any bonus if your league rules on it differently, then copy the list and enter it in Sleeper. Owners see your edits on the Bonus tab.</p></div>' + sheetCard(W, true);
+    } else if (bonusMode()) h += '<div class="card"><div class="kicker">Score sheet</div><p class="fine">New scores appear here after the first week settles.</p></div>';
     h += '<div class="card"><h3>Owner links</h3><p class="fine">Send each owner their own link privately. A link is that owner\'s login, so anyone holding it can run that franchise.</p><div class="invites">' +
       V.invites.map((v) => '<div class="invite"><label for="inv-' + v.rid + '">' + esc(v.name) + (v.admin ? ' (you, commissioner)' : '') + '</label><div class="row"><input id="inv-' + v.rid + '" readonly value="' + esc(base + v.token) + '"><button class="btn ghost small" data-act="copy" data-v="' + esc(base + v.token) + '">Copy</button></div></div>').join('') + '</div></div>';
     if (V.demo) h += '<div class="card"><h3>Demo league clock</h3><p class="fine">A demo league has no real schedule, so you move time by hand.</p>' +
@@ -3265,6 +3301,13 @@ tr.me td:first-child { box-shadow: inset 3px 0 0 var(--team); }
     mini(v) { playMini(v); },
     sync() { if (LG) return refresh(true); sync(); },
     bonusweek(v) { LG.bonusWeek = +v; render(); },
+    sheetweek(v) { LG.sheetWeek = +v; render(); },
+    saveov(v) {
+      const out = {};
+      document.querySelectorAll('input.ov').forEach((el) => { const n = +el.value; out[el.dataset.rid] = el.value === '' || Math.abs(n - +el.dataset.calc) < 0.05 ? null : n; });
+      lact({ a: 'override', week: +v, v: out }).then(() => { if (!notice) { notice = 'Adjustments saved.'; render(); } });
+    },
+    resetov(v) { const out = {}; document.querySelectorAll('input.ov').forEach((el) => (out[el.dataset.rid] = null)); lact({ a: 'override', week: +v, v: out }); },
     savesettings() { lact({ a: 'settings', v: readSettings() }).then(() => { if (!notice) { notice = 'Settings saved.'; render(); } }); },
     demolock() { lact({ a: 'demoLock' }); },
     demofinish() { LG.shown = false; lact({ a: 'demoFinish' }).then(maybeReport); },

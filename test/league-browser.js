@@ -52,7 +52,18 @@ const out = process.argv[2];
   if (out) await page.screenshot({ path: path.join(out, 'lg-3-report.png') });
   await page.click('[data-act="close"]');
   await page.click('#tab-bonus');
-  assert.strictEqual(await page.locator('#panel tbody tr').count(), 10);
+  assert((await page.textContent('#panel')).includes('Season ledger'), 'sim standings shown');
+  assert.strictEqual(await page.locator('#panel table').nth(1).locator('tbody tr').count(), 10);
+  // the commissioner edits one adjustment on the score sheet
+  await page.click('#tab-admin');
+  assert(await page.locator('input.ov').count() === 10, 'score sheet has an input per team');
+  const rid = await page.locator('input.ov').first().getAttribute('data-rid');
+  await page.fill('#ov-' + rid, '3.3'); await page.click('[data-act="saveov"]');
+  await page.waitForFunction(() => document.querySelector('#panel').textContent.includes('Adjustments saved'));
+  assert.strictEqual(await page.inputValue('#ov-' + rid), '3.3');
+  if (out) await page.screenshot({ path: path.join(out, 'lg-6-sheet.png'), fullPage: false });
+  await page.click('#tab-bonus');
+  assert((await page.textContent('#panel')).includes('commissioner edit'));
   assert((await page.textContent('#panel')).includes('7.5'));
   // the second owner visits the commissioner's city and sees the building there
   await p2.reload(); await p2.waitForSelector('#modal:not([hidden])'); await p2.click('[data-act="close"]');
