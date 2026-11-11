@@ -1,0 +1,6 @@
+.git
+.gitignore
+shots/
+data/
+*.zip
+node_modules/

@@ -36,6 +36,22 @@ Owners need a public address. Any host that runs a long-lived Node process works
 
 A `Dockerfile` is included for hosts that deploy from one.
 
+### Deploy to Google Cloud Run
+
+Cloud Run runs the container and scales to zero when nobody is playing. League state lives in a Cloud Storage bucket mounted at `/data`, so it survives restarts. Keep `--max-instances 1`: the server is the only writer of `leagues.json`.
+
+From Google Cloud Shell, in this folder (replace `PROJECT` and choose your own `CREATE_KEY`):
+
+```bash
+gcloud config set project PROJECT
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
+gcloud storage buckets create gs://PROJECT-franchise-tycoon --location=us-central1
+gcloud storage buckets add-iam-policy-binding gs://PROJECT-franchise-tycoon --member="serviceAccount:$(gcloud projects describe PROJECT --format='value(projectNumber)')-compute@developer.gserviceaccount.com" --role=roles/storage.objectUser
+gcloud run deploy franchise-tycoon --source . --region us-central1 --allow-unauthenticated --max-instances 1 --execution-environment gen2 --set-env-vars CREATE_KEY=your-secret,DATA_FILE=/data/leagues.json --add-volume name=data,type=cloud-storage,bucket=PROJECT-franchise-tycoon --add-volume-mount volume=data,mount-path=/data
+```
+
+To ship an update, run the last command again.
+
 ### How a season runs
 
 1. The commissioner creates the league season from their Sleeper username, sets the rules, and sends each owner their private link from the Admin tab. A link is that owner's login.
