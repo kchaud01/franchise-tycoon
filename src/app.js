@@ -409,6 +409,7 @@
     if (!renderer) {
       const cv = $('#city');
       renderer = new FT.Renderer(cv);
+      renderer.pixel = true; $('#btn-pixel').classList.add('on'); // style sample: pixel art on by default
       renderer.start();
       const pick = (e) => { const b = cv.getBoundingClientRect(); return renderer.pick(e.clientX - b.left, e.clientY - b.top); };
       // drag to pan (mouse always; touch only once zoomed in, so the page still scrolls), wheel to zoom, click to select
@@ -823,6 +824,7 @@
     zoomin() { renderer.zoomBy(1.3); syncTouch(); },
     zoomout() { renderer.zoomBy(1 / 1.3); syncTouch(); },
     zoomreset() { renderer.resetView(); syncTouch(); },
+    pixel() { renderer.pixel = !renderer.pixel; renderer.resize(); const b = $('#btn-pixel'); b.classList.toggle('on', renderer.pixel); b.setAttribute('aria-pressed', renderer.pixel); },
     menu() { const m = $('#menu'); m.hidden = !m.hidden; setup.wipe = false; $('#menu [data-act="reset"]').textContent = 'Start over'; },
     switchleague() { $('#menu').hidden = true; if (conn && conn.username) setup.username = conn.username; setup.keep = true; showSetup(); },
     reset() { if (!setup.wipe) { setup.wipe = true; $('#menu [data-act="reset"]').textContent = 'Tap again to erase the franchise'; return; } $('#menu').hidden = true; setup.wipe = false; setup.keep = false; wipe(); showSetup(); },

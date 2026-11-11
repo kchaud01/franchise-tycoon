@@ -105,6 +105,8 @@ main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1
 .zoom { position: absolute; left: max(12px, env(safe-area-inset-left, 0px)); bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
 .zoom button { width: 38px; height: 34px; background: rgba(22, 31, 45, .85); border: 1px solid var(--line); border-radius: 6px; font: 600 17px var(--display); }
 .zoom button:hover { border-color: var(--muted); }
+.zoom #btn-pixel, .zoom #btn-zoomreset { width: auto; padding: 0 9px; font-size: 14px; text-transform: uppercase; letter-spacing: .06em; }
+.zoom #btn-pixel.on { background: var(--team); border-color: transparent; color: #fff; }
 .side { display: flex; flex-direction: column; min-height: 0; background: var(--panel); border-left: 1px solid var(--line); }
 .tabs { display: flex; border-bottom: 1px solid var(--line); }
 .tabs button { flex: 1; min-width: 0; background: none; border: 0; border-bottom: 3px solid transparent; padding: 12px 2px 9px; font-size: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; color: var(--muted); }
@@ -346,6 +348,7 @@ p.won { margin: 0; }
           <button data-act="zoomin" id="btn-zoomin" aria-label="Zoom in">+</button>
           <button data-act="zoomout" id="btn-zoomout" aria-label="Zoom out">&minus;</button>
           <button data-act="zoomreset" id="btn-zoomreset" aria-label="Reset view">Fit</button>
+          <button data-act="pixel" id="btn-pixel" aria-pressed="true" aria-label="Pixel art style on or off">Pixel</button>
         </div>
       </section>
       <aside class="side">
@@ -1371,6 +1374,14 @@ p.won { margin: 0; }
 
   // ---- colour helpers ----------------------------------------------------------------
   const cache = {};
+  /** shade() for any colour string the art uses: '#rrggbb' or 'rgb(r,g,b)'. */
+  function shadeAny(c, amt) {
+    if (c.charAt(0) === '#') return shade(c, amt);
+    const m = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(c);
+    if (!m) return c;
+    const hex = '#' + [m[1], m[2], m[3]].map((v) => (+v).toString(16).padStart(2, '0')).join('');
+    return shade(hex, amt);
+  }
   function shade(hex, amt) {
     const k = hex + amt;
     if (cache[k]) return cache[k];
@@ -1415,6 +1426,42 @@ p.won { margin: 0; }
     cream: '#efe6d2', brick: '#a65f48', white: '#eef1f4', steel: '#6d7887', red: '#e5484d', wood: '#8a6240',
   };
 
+  // ---- pixel-art mode -------------------------------------------------------------------------
+  const PIX = 3, PIX_SS = 3;   // one art pixel is PIX screen pixels, sampled PIX_SS x PIX_SS times
+  const lum = (a, k) => a[k] * 0.3 + a[k + 1] * 0.59 + a[k + 2] * 0.11;
+  /** Reduce the large frame to art pixels. Each art pixel takes the most common colour under it (so nothing
+      blurs), colours step into bands, and edges get dark one-pixel outlines. */
+  function pixelate(hctx, hi, vctx, vis) {
+    const W = vis.width, H = vis.height, sw = hi.width, s = hctx.getImageData(0, 0, sw, hi.height).data;
+    const img = vctx.createImageData(W, H), o = img.data, N = PIX_SS * PIX_SS, keys = new Int32Array(N), at = new Int32Array(N);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      let n = 0, clear = 0;
+      for (let j = 0; j < PIX_SS; j++) for (let i = 0; i < PIX_SS; i++) {
+        const k = ((y * PIX_SS + j) * sw + x * PIX_SS + i) * 4;
+        if (s[k + 3] < 128) { clear++; continue; }
+        keys[n] = ((s[k] >> 4) << 8) | ((s[k + 1] >> 4) << 4) | (s[k + 2] >> 4); at[n++] = k;
+      }
+      const q = (y * W + x) * 4;
+      if (clear * 2 > N || !n) continue;
+      let best = 0, bestN = 0;
+      for (let a = 0; a < n; a++) { let c = 0; for (let b = 0; b < n; b++) if (keys[b] === keys[a]) c++; if (c > bestN) { bestN = c; best = at[a]; } }
+      // step brightness into bands but keep the hue, and push colours a little away from grey
+      const r0 = s[best], g0 = s[best + 1], b0 = s[best + 2], L = r0 * 0.3 + g0 * 0.59 + b0 * 0.11;
+      const Lq = Math.max(6, Math.round(L / 20) * 20), k = L > 0 ? Lq / L : 0, sat = 1.16;
+      o[q] = (L + (r0 - L) * sat) * k; o[q + 1] = (L + (g0 - L) * sat) * k; o[q + 2] = (L + (b0 - L) * sat) * k; o[q + 3] = 255;
+    }
+    const src = new Uint8ClampedArray(o);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const q = (y * W + x) * 4;
+      if (!src[q + 3]) continue;
+      const edgeOut = (x > 0 && !src[q - 1]) || (x < W - 1 && !src[q + 7]) || (y > 0 && !src[q - W * 4 + 3]) || (y < H - 1 && !src[q + W * 4 + 3]);
+      if (edgeOut) { o[q] = 24; o[q + 1] = 22; o[q + 2] = 38; continue; }
+      const L = lum(src, q), r = x < W - 1 ? lum(src, q + 4) : L, d = y < H - 1 ? lum(src, q + W * 4) : L;
+      if (L + 52 < r || L + 52 < d) { o[q] = src[q] * 0.55; o[q + 1] = src[q + 1] * 0.55; o[q + 2] = src[q + 2] * 0.6; }
+    }
+    vctx.putImageData(img, 0, 0);
+  }
+
   function Renderer(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
@@ -1432,9 +1479,17 @@ p.won { margin: 0; }
   const R = Renderer.prototype;
 
   R.resize = function () {
-    const c = this.canvas, dpr = Math.min(2, root.devicePixelRatio || 1);
-    const w = c.clientWidth || 800, h = c.clientHeight || 560;
-    c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+    const c = this.canvas, w = c.clientWidth || 800, h = c.clientHeight || 560;
+    let dpr = Math.min(2, root.devicePixelRatio || 1);
+    if (this.pixel) {
+      // pixel art: the visible canvas holds one value per art pixel and the browser blows it up without smoothing;
+      // the scene itself is drawn SS times larger into `hi` and reduced by pixelate()
+      c.width = Math.ceil(w / PIX); c.height = Math.ceil(h / PIX);
+      if (!this.hi) { this.hi = root.document.createElement('canvas'); this.hiCtx = this.hi.getContext('2d', { willReadFrequently: true }); hookTone(this.hiCtx); }
+      this.hi.width = c.width * PIX_SS; this.hi.height = c.height * PIX_SS;
+      dpr = PIX_SS / PIX;
+    } else { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+    c.style.imageRendering = this.pixel ? 'pixelated' : '';
     this.w = w; this.h = h; this.dpr = dpr;
     this.base = Math.min(w / (VIEW.x1 - VIEW.x0), h / (VIEW.y1 - VIEW.y0));
     if (this.zoom == null) this.resetView(); else this.applyView();
@@ -1488,9 +1543,17 @@ p.won { margin: 0; }
   function box(ctx, x, y, w, d, z, h, col, o) {
     o = o || {};
     const top = o.top || shade(col, 0.2), left = o.left || col, right = o.right || shade(col, -0.28);
-    poly(ctx, [P(x, y + d, z), P(x + w, y + d, z), P(x + w, y + d, z + h), P(x, y + d, z + h)], left);
-    poly(ctx, [P(x + w, y + d, z), P(x + w, y, z), P(x + w, y, z + h), P(x + w, y + d, z + h)], right);
-    poly(ctx, [P(x, y, z + h), P(x + w, y, z + h), P(x + w, y + d, z + h), P(x, y + d, z + h)], top);
+    const Lf = [P(x, y + d, z), P(x + w, y + d, z), P(x + w, y + d, z + h), P(x, y + d, z + h)];
+    const Rf = [P(x + w, y + d, z), P(x + w, y, z), P(x + w, y, z + h), P(x + w, y + d, z + h)];
+    const Tf = [P(x, y, z + h), P(x + w, y, z + h), P(x + w, y + d, z + h), P(x, y + d, z + h)];
+    if (h < 5 || typeof left !== 'string') { poly(ctx, Lf, left); poly(ctx, Rf, right); poly(ctx, Tf, top); return; }
+    // the sun is high on the left: walls catch light at the top, darken toward the ground, and cast a shadow to the right
+    if (h >= 9 && z <= 3 && !o.noShadow) {
+      const L = Math.min(0.6, h / 75);
+      poly(ctx, [P(x + w, y, z), P(x + w + L, y + L * 0.3, z), P(x + w + L, y + d + L * 0.3, z), P(x + w, y + d, z)], 'rgba(10,16,28,0.26)');
+    }
+    const lit = (pts, c) => { const g = ctx.createLinearGradient(0, pts[2][1], 0, pts[0][1]); g.addColorStop(0, tone(shadeAny(c, 0.12))); g.addColorStop(1, tone(shadeAny(c, -0.16))); return g; };
+    poly(ctx, Lf, lit(Lf, left)); poly(ctx, Rf, lit(Rf, right)); poly(ctx, Tf, top);
   }
   /** A rectangle on the left (L) or right (R) visible wall of a box. u0..u1 across the wall (0..1), v0..v1 px above the base. */
   function wallRect(ctx, side, x, y, w, d, z, u0, u1, v0, v1, fill) {
@@ -2784,6 +2847,13 @@ p.won { margin: 0; }
   };
 
   R.draw = function () {
+    if (!this.pixel || !this.hi) return this.drawScene();
+    const vis = this.canvas, vctx = this.ctx;
+    this.canvas = this.hi; this.ctx = this.hiCtx;
+    try { this.drawScene(); } finally { this.canvas = vis; this.ctx = vctx; }
+    pixelate(this.hiCtx, this.hi, vctx, vis);
+  };
+  R.drawScene = function () {
     if (this.trip && this.drawTrip()) return;
     const ctx = this.ctx, S = this.state, t = this.t;
     NIGHT = !!this.night; FLOOD = false; TRIM = S && S.color2 ? S.color2 : '#eef1f4';
@@ -2864,9 +2934,9 @@ p.won { margin: 0; }
     let last = 0;
     const loop = (now) => {
       this.raf = root.requestAnimationFrame(loop);
-      if (now - last < (still ? 400 : 40)) return;
+      if (now - last < (still ? 400 : this.pixel ? 100 : 40)) return; // pixel art steps like sprite animation
       last = now;
-      if (!still) this.t += 1;
+      if (!still) this.t += this.pixel ? 2.5 : 1;
       this.draw();
     };
     this.raf = root.requestAnimationFrame(loop);
@@ -3692,6 +3762,7 @@ p.won { margin: 0; }
     if (!renderer) {
       const cv = $('#city');
       renderer = new FT.Renderer(cv);
+      renderer.pixel = true; $('#btn-pixel').classList.add('on'); // style sample: pixel art on by default
       renderer.start();
       const pick = (e) => { const b = cv.getBoundingClientRect(); return renderer.pick(e.clientX - b.left, e.clientY - b.top); };
       // drag to pan (mouse always; touch only once zoomed in, so the page still scrolls), wheel to zoom, click to select
@@ -4106,6 +4177,7 @@ p.won { margin: 0; }
     zoomin() { renderer.zoomBy(1.3); syncTouch(); },
     zoomout() { renderer.zoomBy(1 / 1.3); syncTouch(); },
     zoomreset() { renderer.resetView(); syncTouch(); },
+    pixel() { renderer.pixel = !renderer.pixel; renderer.resize(); const b = $('#btn-pixel'); b.classList.toggle('on', renderer.pixel); b.setAttribute('aria-pressed', renderer.pixel); },
     menu() { const m = $('#menu'); m.hidden = !m.hidden; setup.wipe = false; $('#menu [data-act="reset"]').textContent = 'Start over'; },
     switchleague() { $('#menu').hidden = true; if (conn && conn.username) setup.username = conn.username; setup.keep = true; showSetup(); },
     reset() { if (!setup.wipe) { setup.wipe = true; $('#menu [data-act="reset"]').textContent = 'Tap again to erase the franchise'; return; } $('#menu').hidden = true; setup.wipe = false; setup.keep = false; wipe(); showSetup(); },
