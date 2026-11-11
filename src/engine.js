@@ -418,8 +418,83 @@
       });
       const imp = tr.rosters.map((rid) => ({ rid, t: tradeImpact(league, week, rid) })).filter((x) => x.t).sort((p, q) => q.t.net - p.t.net);
       const fee = imp.length && imp[0].t.net >= 0.5 ? ' ' + teamName(league, imp[0].rid) + ' pay a $' + Math.round((imp[0].t.net * TRADE_FEE) / 1e3) + 'k transfer fee.' : '';
-      return { week, kind: 'trade', text: 'Trade: ' + parts.join('; ') + '.' + fee };
+      const star = imp.length && imp[0].t.net >= 0.5 && imp[0].t.in[0] ? imp[0] : null;
+      const head = star ? 'Blockbuster: ' + teamName(league, star.rid) + ' land ' + (star.t.in[0].n || nm(star.t.in[0].id)) : 'Trade: ' + tr.rosters.map((r) => teamName(league, r)).join(' and ') + ' make a deal';
+      const body = parts.join('; ') + '.' + fee + (star ? ' ' + pick(['Fans were lining up for new jerseys within the hour.', 'One city is celebrating; the other has questions for its front office.', 'Expect a welcome banner outside the stadium this week.'], week, star.rid) : '');
+      return { week, kind: 'trade', weight: star ? 9 : 6, head, body, text: 'Trade: ' + body };
     });
+  }
+
+  // ---- The Daily Herald ---------------------------------------------------------------------
+  /** Pick one phrasing per story so editions read differently but stay stable on reload. */
+  const pick = (list, ...keys) => list[Math.abs(keys.reduce((a, k) => Math.imul(a ^ k, 0x9e3779b1) >>> 0, 7)) % list.length];
+  const pts = (n) => n.toFixed(1);
+  const cash = (n) => '$' + (Math.abs(n) >= 1e6 ? (Math.abs(n) / 1e6).toFixed(2) + 'M' : Math.round(Math.abs(n) / 1e3) + 'k');
+  /** Consecutive wins (positive) or losses (negative) ending at `week`, regular season only. */
+  function streakAt(league, rid, week) {
+    let n = 0;
+    for (let w = week; w >= 1; w--) {
+      const r = weekResult(league, w, rid);
+      if (!r || r.bye || r.tie) break;
+      if (n === 0) n = r.win ? 1 : -1; else if ((n > 0) === r.win) n += n > 0 ? 1 : -1; else break;
+    }
+    return n;
+  }
+  /** Stories for one finished week. reps = {rid: settle() report} for every franchise that settled it.
+      Each story: {week, kind, weight, head, body}; the edition leads with the heaviest. */
+  function weekStories(league, week, reps, nameOf) {
+    const wk = league.weeks[week];
+    if (!wk || !wk.complete) return [];
+    const name = nameOf || ((rid) => teamName(league, rid)), out = [];
+    const add = (kind, weight, head, body) => out.push({ week, kind, weight, head, body });
+    const before = standings(league, week - 1), seen = {}, games = [];
+    for (const id in wk.teams) {
+      const a = +id, b = opponentOf(wk, a);
+      if (b == null || seen[a]) continue;
+      seen[a] = seen[b] = 1;
+      const pa = wk.teams[a].pts, pb = wk.teams[b].pts, aw = pa >= pb;
+      games.push({ w: aw ? a : b, l: aw ? b : a, pw: Math.max(pa, pb), pl: Math.min(pa, pb), m: Math.abs(pa - pb), playoff: !!wk.teams[a].playoff });
+    }
+    if (games.length) {
+      const byMargin = games.slice().sort((x, y) => x.m - y.m), close = byMargin[0], rout = byMargin[byMargin.length - 1];
+      const score = (g) => name(g.w) + ' ' + pts(g.pw) + ', ' + name(g.l) + ' ' + pts(g.pl);
+      if (close.m < 4) add('game', 8, pick(['Photo finish', 'Down to the wire', 'Nail-biter'], week, close.w) + ': ' + score(close),
+        'Just ' + pts(close.m) + ' points separated them' + (close.playoff ? ' with the season on the line.' : '. Somebody is already replaying their start/sit decisions.'));
+      if (rout.m >= 35) add('game', 7, pick(['Rout', 'No contest', 'Blowout'], week, rout.w) + ': ' + score(rout),
+        'A ' + pts(rout.m) + '-point margin. ' + pick(['The visiting fans were heading for the exits by halftime.', 'Concession lines were longer than the competitive portion of this one.', 'Ticket resale prices for the rematch are already falling.'], week, rout.l));
+      // upsets: a team well down the table beats one near the top
+      games.forEach((g) => {
+        const rw = before[g.w] && before[g.w].rank, rl = before[g.l] && before[g.l].rank;
+        if (week >= 3 && rw && rl && rw - rl >= 4) add('upset', 10, 'Upset: No. ' + rw + ' ' + name(g.w) + ' over No. ' + rl + ' ' + name(g.l),
+          'Nobody saw ' + pts(g.pw) + '–' + pts(g.pl) + ' coming. ' + pick(['The front office is said to be "cautiously ecstatic".', 'Expect the losing side\'s group chat to be quiet this week.', 'Bookmakers are reviewing their life choices.'], week, g.w));
+      });
+      const top = games.slice().sort((x, y) => y.pw - x.pw)[0];
+      add('high', 5, 'Week\'s high: ' + name(top.w) + ' put up ' + pts(top.pw), 'The best score in the league this week, in a ' + (top.m < 10 ? 'tight' : 'comfortable') + ' win over ' + name(top.l) + '.');
+    }
+    // player of the week
+    let star = null;
+    for (const id in wk.teams) (wk.teams[id].starters || []).forEach(([pid, p]) => { if (!star || p > star.p) star = { pid, p, rid: +id }; });
+    const pname = star && league.players && league.players[star.pid] && league.players[star.pid].n;
+    if (star && star.p >= 25 && pname) add('player', 6, 'Player of the week: ' + pname + ', ' + pts(star.p) + ' points', 'The top individual score in the league, for ' + name(star.rid) + '. ' + pick(['Jersey sales are expected to follow.', 'Expect a bobblehead night in their honour.', 'Rival owners are reportedly drafting trade offers.'], week, star.rid));
+    // streaks
+    Object.keys(wk.teams).forEach((id) => {
+      const n = streakAt(league, +id, week);
+      if (n >= 4) add('streak', 5, 'Hot streak: ' + name(+id) + ' win ' + n + ' straight', pick(['The district is buzzing and the merch stand cannot keep up.', 'Season-ticket inquiries are up sharply.', 'Rivals are running out of excuses.'], week, +id));
+      if (n <= -4) add('streak', 3, 'Skid: ' + name(+id) + ' drop ' + -n + ' in a row', pick(['Season-ticket holders are asking questions.', 'The front office insists the plan is working.', 'Even the hot dog cart looks worried.'], week, +id));
+    });
+    // the sim side: money, crowds, milestones
+    const ids = Object.keys(reps || {}).filter((id) => reps[id]);
+    if (ids.length) {
+      const rich = ids.slice().sort((a, b) => reps[b].net - reps[a].net)[0], poor = ids.slice().sort((a, b) => reps[a].net - reps[b].net)[0];
+      if (reps[rich].net > 0) add('money', 4, 'Biggest payday: ' + name(+rich) + ' bank ' + cash(reps[rich].net), 'The most profitable franchise in the league this week' + (reps[rich].sellout ? ', helped by a sold-out house.' : '.'));
+      if (reps[poor].net < 0) add('money', 3, 'In the red: ' + name(+poor) + ' lose ' + cash(reps[poor].net), pick(['Upkeep bills arrived before the revenue did.', 'Accountants have been asked to stop sighing audibly.', 'A rebuilding week, in every sense.'], week, +poor));
+      const sold = ids.filter((id) => reps[id].sellout).map((id) => name(+id));
+      if (sold.length) add('crowd', 4, sold.length === 1 ? 'Sold out: ' + sold[0] + ' pack the house' : 'Sellouts across the league', sold.length === 1 ? 'Not an empty seat in the building.' : sold.join(', ') + ' all filled every seat.');
+      ids.forEach((id) => (reps[id].badges || []).forEach((b) => add('milestone', 4, 'Milestone: ' + name(+id) + ' — ' + b.name, 'A ' + cash(b.reward) + ' bonus for the franchise.')));
+      const hot = ids.slice().sort((a, b) => (reps[b].hype[1] - reps[b].hype[0]) - (reps[a].hype[1] - reps[a].hype[0]))[0];
+      if (hot && reps[hot].hype[1] - reps[hot].hype[0] >= 8) add('crowd', 3, 'Fever pitch in ' + name(+hot), 'Hype climbed to ' + Math.round(reps[hot].hype[1]) + ' after this week.');
+    }
+    return out;
   }
 
   // ---- Weekly settlement -------------------------------------------------------------
@@ -665,13 +740,14 @@
     const wg = s.wagers && s.wagers[playedKey(league, nx.week)];
     if (wg && wg.status === 'accepted') { attachWager(results, { from: s.rid, to: wg.opp, amount: wg.amount }); wg.status = 'settled'; wg.won = nx.result.wager ? nx.result.wager.won : null; }
     s.news = (s.news || []).concat(tradeNews(league, nx.week));
-    const rep = settle(s, nx.result);
+    const rep = settle(s, nx.result), reps = { [s.rid]: rep };
     s.played[playedKey(league, nx.week)] = 1;
     s.history.push(rep);
     for (const id in s.rivals) {
       const rr = results[id];
-      if (rr) { settle(s.rivals[id], rr); aiTurn(s.rivals[id]); }
+      if (rr) { reps[id] = settle(s.rivals[id], rr); aiTurn(s.rivals[id]); }
     }
+    s.news = s.news.concat(weekStories(league, nx.week, reps, (rid) => (rid === s.rid ? s.name : teamName(league, rid))));
     return rep;
   }
   /** League table of franchise values, the player's included. */
@@ -694,7 +770,7 @@
     key, isStadium, median, standings, teamName, weekResult, newGame, newFranchise, neighbors, nearStadium, onEdge,
     synergy, effects, forecast, value, build, upgrade, demolish, refund, upgradeStadium, settle, aiTurn,
     nextWeek, playWeek, leaderboard, clamp, slot, matchup, bonusTable, opponentOf, tradeImpact, playerAvg, travelers, attachTravel,
-    attachWager, tradeNews, railReady, buildRail, linked, wagerOpen, offerWagerSolo, proposeRailSolo, railPriceSolo,
+    attachWager, tradeNews, weekStories, streakAt, railReady, buildRail, linked, wagerOpen, offerWagerSolo, proposeRailSolo, railPriceSolo,
     TRADE_FEE, WAGER_MIN, WAGER_MAX, RAIL_COST, RAIL_LEVEL, RAIL_MAX, RAIL_RATE, MINI, MINI_TRIES, MINI_BOOST, MEDALS, miniMedal, recordMini,
   });
   if (typeof module !== 'undefined' && module.exports) module.exports = FT;

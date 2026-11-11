@@ -218,6 +218,48 @@ p.won { margin: 0; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 #wager-amt { flex: 0 0 auto; width: auto; }
 
+/* The Daily Herald: newsprint, deliberately a single light look in either theme */
+.teaser { text-align: left; cursor: pointer; background: #f3eee2; color: #1c1a17; border-color: #d9d0bc; gap: 4px; }
+.teaser:hover { border-color: #8a7f68; }
+.teaser .mast-sm { font: 400 26px/1 "UnifrakturMaguntia", "Old English Text MT", Georgia, serif; text-align: center; border-bottom: 2px solid #1c1a17; padding-bottom: 6px; }
+.teaser .ed { font: 600 11px var(--display); text-transform: uppercase; letter-spacing: .14em; color: #6b6253; text-align: center; }
+.teaser b { font: 700 19px/1.2 "Source Serif 4", Georgia, serif; text-wrap: balance; }
+.teaser em { font: italic 13px "Source Serif 4", Georgia, serif; color: #6b6253; }
+.herald { z-index: 25; place-items: start center; overflow: auto; }
+.paper { width: min(100%, 980px); background: #f3eee2; color: #1c1a17; border-radius: 3px; padding: 18px 26px 28px; box-shadow: 0 30px 80px rgba(0,0,0,.6); font-family: "Source Serif 4", Georgia, "Times New Roman", serif; }
+.paper-top { display: flex; justify-content: space-between; gap: 8px; }
+.paper-top button { background: none; border: 0; color: #6b6253; font: 600 13px var(--display); text-transform: uppercase; letter-spacing: .08em; padding: 4px 2px; }
+.paper-top button:hover:not(:disabled) { color: #1c1a17; }
+.mast { text-align: center; border-bottom: 3px double #1c1a17; margin-bottom: 16px; }
+.mast h1 { font: 400 clamp(40px, 9vw, 76px)/1.05 "UnifrakturMaguntia", "Old English Text MT", Georgia, serif; margin: 4px 0 8px; text-transform: none; letter-spacing: 0; }
+.dateline { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; border-top: 1px solid #1c1a17; padding: 5px 0 6px; font: 600 12px var(--display); text-transform: uppercase; letter-spacing: .1em; }
+.paper-grid { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 26px; }
+.paper-main { min-width: 0; }
+.paper h2, .paper h3, .paper h4 { text-transform: none; letter-spacing: 0; color: #1c1a17; font-family: "Source Serif 4", Georgia, serif; }
+.lead h2 { font-size: clamp(28px, 4.4vw, 44px); font-weight: 900; line-height: 1.04; margin-bottom: 10px; }
+.lede { font-size: 18px; line-height: 1.5; color: #2c2924; }
+.lede::first-letter { float: left; font-size: 3.1em; line-height: .85; padding: 4px 6px 0 0; font-weight: 900; }
+.seconds { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; border-top: 1px solid #1c1a17; margin-top: 18px; padding-top: 14px; }
+.seconds article + article { border-left: 1px solid #c9bfa8; padding-left: 20px; }
+.seconds h3 { font-size: 21px; font-weight: 700; line-height: 1.15; margin-bottom: 6px; }
+.seconds p, .briefs p { font-size: 15px; line-height: 1.5; color: #2c2924; }
+.briefs { border-top: 1px solid #1c1a17; margin-top: 18px; padding-top: 10px; columns: 2 220px; column-gap: 22px; column-rule: 1px solid #c9bfa8; }
+.briefs h4, .box h4 { font: 700 13px var(--display); text-transform: uppercase; letter-spacing: .14em; color: #1c1a17; margin-bottom: 8px; column-span: all; }
+.briefs p { break-inside: avoid; margin-bottom: 9px; }
+.paper-side { display: flex; flex-direction: column; gap: 16px; border-left: 1px solid #1c1a17; padding-left: 22px; min-width: 0; }
+.box table { width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+.box td { border: 0; padding: 2px 0; color: #2c2924; }
+.box td:last-child { text-align: right; padding-left: 8px; }
+.box tr.wa td { font-weight: 700; color: #1c1a17; }
+.box tr.gap td { padding-bottom: 8px; border-bottom: 1px dotted #c9bfa8; }
+.ads p { font-size: 13.5px; line-height: 1.4; border-bottom: 1px dotted #c9bfa8; padding: 6px 0; color: #2c2924; }
+@media (max-width: 760px) {
+  .paper { padding: 14px 16px 22px; }
+  .paper-grid, .seconds { grid-template-columns: 1fr; }
+  .seconds article + article { border-left: 0; padding-left: 0; border-top: 1px solid #c9bfa8; padding-top: 12px; }
+  .paper-side { border-left: 0; padding-left: 0; border-top: 3px double #1c1a17; padding-top: 14px; }
+}
+
 /* game-day report */
 .modal { position: fixed; inset: 0; background: rgba(8, 12, 20, .72); display: grid; place-items: center; z-index: 20; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
 .modal-body { width: min(100%, 560px); max-height: 100%; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-top: 4px solid var(--team); border-radius: 10px; padding: 22px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 30px 80px rgba(0,0,0,.6); }

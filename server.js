@@ -114,9 +114,10 @@ function createApp(opts) {
         if (!FT.attachWager(results, w)) { w.status = 'void'; return; }
         const won = results[w.from].wager.won;
         w.status = 'settled'; w.winner = won === null ? null : won ? w.from : w.to;
-        news.push({ week: lg.week, kind: 'wager', text: w.winner == null ? name(w.from) + ' and ' + name(w.to) + ' tied, so their $' + w.amount / 1e3 + 'k wager is a push.' : name(w.winner) + ' won a $' + w.amount / 1e3 + 'k wager from ' + name(w.winner === w.from ? w.to : w.from) + '.' });
+        news.push({ week: lg.week, kind: 'wager', weight: 5, head: w.winner == null ? 'Wager push: ' + name(w.from) + ' and ' + name(w.to) + ' tie' : 'Pay up: ' + name(w.winner) + ' collect ' + '$' + w.amount / 1e3 + 'k', text: w.winner == null ? name(w.from) + ' and ' + name(w.to) + ' tied, so their $' + w.amount / 1e3 + 'k wager is a push.' : name(w.winner) + ' won a $' + w.amount / 1e3 + 'k wager from ' + name(w.winner === w.from ? w.to : w.from) + '.' });
       });
       FT.tradeNews(lg.data, lg.week).forEach((n) => news.push(n));
+      const reps = {};
       for (const id in lg.teams) {
         const r = results[id];
         if (!r) continue;
@@ -124,7 +125,7 @@ function createApp(opts) {
         const rep = FT.settle(t.f, r);
         // visiting fans in the building cut the bonus the home owner brings into this matchup
         if (rep.visitors) cut[id] = { pct: Math.min(lg.settings.travelCut, Math.round(rep.visitorShare * 200) / 100), visitors: rep.visitors, from: r.oppId };
-        t.f.history.push(rep);
+        t.f.history.push(rep); reps[id] = rep;
         const twinRep = FT.settle(t.twin, r);
         FT.aiTurn(t.twin);
         rows.push({ rid: +id, net: rep.net, twinNet: twinRep.net, twinGross: twinRep.gross });
@@ -132,6 +133,7 @@ function createApp(opts) {
       // bonuses from this week are added to next week's fantasy score, so the playoff rule looks one week ahead
       const paid = lg.settings.mode !== 'sim' && (lg.settings.playoffBonus || lg.week + 1 < lg.settings.playoffStart);
       lg.bonus[lg.week] = { cap: paid ? lg.settings.cap : 0, payout: lg.settings.payout, paid, rows: FT.bonusTable(rows, paid ? lg.settings.cap : 0, lg.settings.payout) };
+      FT.weekStories(lg.data, lg.week, reps, name).forEach((n) => news.push(n));
       lg.cut = lg.cut || {}; lg.cut[lg.week] = cut;
       lg.week++; lg.demoLocked = false; changed = true;
     }
@@ -200,7 +202,7 @@ function createApp(opts) {
     };
     const mu = FT.matchup(lg.data, lg.week, who.rid);
     if (mu && !mu.bye && lg.teams[mu.oppId]) v.travel = mu.home ? { in: FT.travelers(lg.teams[mu.oppId].f, me.f) } : { out: FT.travelers(me.f, lg.teams[mu.oppId].f) };
-    v.news = (lg.news || []).slice(-40).reverse();
+    v.news = (lg.news || []).slice(-400);
     v.wagers = ((lg.wagers || {})[lg.week] || []).filter((w) => w.from === who.rid || w.to === who.rid);
     v.wagerOpen = v.phase === 'open' && FT.wagerOpen(lg.data, lg.week, who.rid);
     v.railOffers = (lg.railOffers || []).filter((o) => o.status === 'offered' && (o.from === who.rid || o.to === who.rid));
@@ -247,7 +249,7 @@ function createApp(opts) {
         must(FT.wagerOpen(lg.data, lg.week, who.rid), 'Wagers close once the first points are scored.');
         must(f.cash >= w.amount && lg.teams[w.from].f.cash >= w.amount, 'Both owners need $' + w.amount / 1e3 + 'k in cash to lock this in.');
         w.status = 'accepted';
-        (lg.news = lg.news || []).push({ week: lg.week, kind: 'wager', text: FT.teamName(lg.data, w.from) + ' and ' + FT.teamName(lg.data, w.to) + ' put $' + w.amount / 1e3 + 'k on their Week ' + lg.week + ' matchup.' });
+        (lg.news = lg.news || []).push({ week: lg.week, kind: 'wager', weight: 4, head: 'Money on the line: ' + FT.teamName(lg.data, w.from) + ' and ' + FT.teamName(lg.data, w.to) + ' bet $' + w.amount / 1e3 + 'k', text: FT.teamName(lg.data, w.from) + ' and ' + FT.teamName(lg.data, w.to) + ' put $' + w.amount / 1e3 + 'k on their Week ' + lg.week + ' matchup.' });
         break;
       }
       case 'rail': { // propose a rail link to another owner
@@ -268,7 +270,7 @@ function createApp(opts) {
         const err = FT.buildRail(lg.teams[o.from].f, f);
         must(!err, err);
         o.status = 'built';
-        (lg.news = lg.news || []).push({ week: lg.week, kind: 'rail', text: 'A rail line now links ' + FT.teamName(lg.data, o.from) + ' and ' + FT.teamName(lg.data, o.to) + '.' });
+        (lg.news = lg.news || []).push({ week: lg.week, kind: 'rail', weight: 5, head: 'All aboard: rail line opens between ' + FT.teamName(lg.data, o.from) + ' and ' + FT.teamName(lg.data, o.to), text: 'A rail line now links ' + FT.teamName(lg.data, o.from) + ' and ' + FT.teamName(lg.data, o.to) + '.' });
         break;
       }
       case 'style': { // cosmetic only, so it is allowed even while the week is locked

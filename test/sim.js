@@ -66,4 +66,14 @@ for (const seed of [2026, 7, 99]) {
   assert.strictEqual(FT.nextWeek(s, league).status, 'ready');
   assert(JSON.parse(JSON.stringify(s)), 'state serializes');
 }
+// The Daily Herald: every played week gets an edition with a lead story and a scoreboard to back it
+{
+  const L = FT.demoLeague(2026, 16), S = FT.newGame(L, {});
+  for (let i = 0; i < 16; i++) FT.playWeek(S, L);
+  for (let w = 1; w <= 16; w++) {
+    const ed = S.news.filter((n) => n.week === w);
+    assert(ed.length >= 3 && ed.every((n) => n.head && typeof n.weight === 'number'), 'edition for week ' + w);
+  }
+  assert(S.news.some((n) => n.kind === 'upset') && S.news.some((n) => n.kind === 'trade' && /Blockbuster/.test(n.head)), 'upsets and trades make the paper');
+}
 console.log('\nall checks passed');

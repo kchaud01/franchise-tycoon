@@ -8,7 +8,7 @@
 <body>
 <title>Franchise Tycoon</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=UnifrakturMaguntia&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,700;0,8..60,900;1,8..60,400&display=swap">
 <style>
 /* Layout: one screen. A dusk-lit district fills the left; a scoreboard-styled control panel sits on the right (below it on phones). */
 :root {
@@ -229,6 +229,48 @@ p.won { margin: 0; }
 .offer { border-top: 1px solid var(--line); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 #wager-amt { flex: 0 0 auto; width: auto; }
+
+/* The Daily Herald: newsprint, deliberately a single light look in either theme */
+.teaser { text-align: left; cursor: pointer; background: #f3eee2; color: #1c1a17; border-color: #d9d0bc; gap: 4px; }
+.teaser:hover { border-color: #8a7f68; }
+.teaser .mast-sm { font: 400 26px/1 "UnifrakturMaguntia", "Old English Text MT", Georgia, serif; text-align: center; border-bottom: 2px solid #1c1a17; padding-bottom: 6px; }
+.teaser .ed { font: 600 11px var(--display); text-transform: uppercase; letter-spacing: .14em; color: #6b6253; text-align: center; }
+.teaser b { font: 700 19px/1.2 "Source Serif 4", Georgia, serif; text-wrap: balance; }
+.teaser em { font: italic 13px "Source Serif 4", Georgia, serif; color: #6b6253; }
+.herald { z-index: 25; place-items: start center; overflow: auto; }
+.paper { width: min(100%, 980px); background: #f3eee2; color: #1c1a17; border-radius: 3px; padding: 18px 26px 28px; box-shadow: 0 30px 80px rgba(0,0,0,.6); font-family: "Source Serif 4", Georgia, "Times New Roman", serif; }
+.paper-top { display: flex; justify-content: space-between; gap: 8px; }
+.paper-top button { background: none; border: 0; color: #6b6253; font: 600 13px var(--display); text-transform: uppercase; letter-spacing: .08em; padding: 4px 2px; }
+.paper-top button:hover:not(:disabled) { color: #1c1a17; }
+.mast { text-align: center; border-bottom: 3px double #1c1a17; margin-bottom: 16px; }
+.mast h1 { font: 400 clamp(40px, 9vw, 76px)/1.05 "UnifrakturMaguntia", "Old English Text MT", Georgia, serif; margin: 4px 0 8px; text-transform: none; letter-spacing: 0; }
+.dateline { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; border-top: 1px solid #1c1a17; padding: 5px 0 6px; font: 600 12px var(--display); text-transform: uppercase; letter-spacing: .1em; }
+.paper-grid { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 26px; }
+.paper-main { min-width: 0; }
+.paper h2, .paper h3, .paper h4 { text-transform: none; letter-spacing: 0; color: #1c1a17; font-family: "Source Serif 4", Georgia, serif; }
+.lead h2 { font-size: clamp(28px, 4.4vw, 44px); font-weight: 900; line-height: 1.04; margin-bottom: 10px; }
+.lede { font-size: 18px; line-height: 1.5; color: #2c2924; }
+.lede::first-letter { float: left; font-size: 3.1em; line-height: .85; padding: 4px 6px 0 0; font-weight: 900; }
+.seconds { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; border-top: 1px solid #1c1a17; margin-top: 18px; padding-top: 14px; }
+.seconds article + article { border-left: 1px solid #c9bfa8; padding-left: 20px; }
+.seconds h3 { font-size: 21px; font-weight: 700; line-height: 1.15; margin-bottom: 6px; }
+.seconds p, .briefs p { font-size: 15px; line-height: 1.5; color: #2c2924; }
+.briefs { border-top: 1px solid #1c1a17; margin-top: 18px; padding-top: 10px; columns: 2 220px; column-gap: 22px; column-rule: 1px solid #c9bfa8; }
+.briefs h4, .box h4 { font: 700 13px var(--display); text-transform: uppercase; letter-spacing: .14em; color: #1c1a17; margin-bottom: 8px; column-span: all; }
+.briefs p { break-inside: avoid; margin-bottom: 9px; }
+.paper-side { display: flex; flex-direction: column; gap: 16px; border-left: 1px solid #1c1a17; padding-left: 22px; min-width: 0; }
+.box table { width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+.box td { border: 0; padding: 2px 0; color: #2c2924; }
+.box td:last-child { text-align: right; padding-left: 8px; }
+.box tr.wa td { font-weight: 700; color: #1c1a17; }
+.box tr.gap td { padding-bottom: 8px; border-bottom: 1px dotted #c9bfa8; }
+.ads p { font-size: 13.5px; line-height: 1.4; border-bottom: 1px dotted #c9bfa8; padding: 6px 0; color: #2c2924; }
+@media (max-width: 760px) {
+  .paper { padding: 14px 16px 22px; }
+  .paper-grid, .seconds { grid-template-columns: 1fr; }
+  .seconds article + article { border-left: 0; padding-left: 0; border-top: 1px solid #c9bfa8; padding-top: 12px; }
+  .paper-side { border-left: 0; padding-left: 0; border-top: 3px double #1c1a17; padding-top: 14px; }
+}
 
 /* game-day report */
 .modal { position: fixed; inset: 0; background: rgba(8, 12, 20, .72); display: grid; place-items: center; z-index: 20; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
@@ -751,8 +793,83 @@ p.won { margin: 0; }
       });
       const imp = tr.rosters.map((rid) => ({ rid, t: tradeImpact(league, week, rid) })).filter((x) => x.t).sort((p, q) => q.t.net - p.t.net);
       const fee = imp.length && imp[0].t.net >= 0.5 ? ' ' + teamName(league, imp[0].rid) + ' pay a $' + Math.round((imp[0].t.net * TRADE_FEE) / 1e3) + 'k transfer fee.' : '';
-      return { week, kind: 'trade', text: 'Trade: ' + parts.join('; ') + '.' + fee };
+      const star = imp.length && imp[0].t.net >= 0.5 && imp[0].t.in[0] ? imp[0] : null;
+      const head = star ? 'Blockbuster: ' + teamName(league, star.rid) + ' land ' + (star.t.in[0].n || nm(star.t.in[0].id)) : 'Trade: ' + tr.rosters.map((r) => teamName(league, r)).join(' and ') + ' make a deal';
+      const body = parts.join('; ') + '.' + fee + (star ? ' ' + pick(['Fans were lining up for new jerseys within the hour.', 'One city is celebrating; the other has questions for its front office.', 'Expect a welcome banner outside the stadium this week.'], week, star.rid) : '');
+      return { week, kind: 'trade', weight: star ? 9 : 6, head, body, text: 'Trade: ' + body };
     });
+  }
+
+  // ---- The Daily Herald ---------------------------------------------------------------------
+  /** Pick one phrasing per story so editions read differently but stay stable on reload. */
+  const pick = (list, ...keys) => list[Math.abs(keys.reduce((a, k) => Math.imul(a ^ k, 0x9e3779b1) >>> 0, 7)) % list.length];
+  const pts = (n) => n.toFixed(1);
+  const cash = (n) => '$' + (Math.abs(n) >= 1e6 ? (Math.abs(n) / 1e6).toFixed(2) + 'M' : Math.round(Math.abs(n) / 1e3) + 'k');
+  /** Consecutive wins (positive) or losses (negative) ending at `week`, regular season only. */
+  function streakAt(league, rid, week) {
+    let n = 0;
+    for (let w = week; w >= 1; w--) {
+      const r = weekResult(league, w, rid);
+      if (!r || r.bye || r.tie) break;
+      if (n === 0) n = r.win ? 1 : -1; else if ((n > 0) === r.win) n += n > 0 ? 1 : -1; else break;
+    }
+    return n;
+  }
+  /** Stories for one finished week. reps = {rid: settle() report} for every franchise that settled it.
+      Each story: {week, kind, weight, head, body}; the edition leads with the heaviest. */
+  function weekStories(league, week, reps, nameOf) {
+    const wk = league.weeks[week];
+    if (!wk || !wk.complete) return [];
+    const name = nameOf || ((rid) => teamName(league, rid)), out = [];
+    const add = (kind, weight, head, body) => out.push({ week, kind, weight, head, body });
+    const before = standings(league, week - 1), seen = {}, games = [];
+    for (const id in wk.teams) {
+      const a = +id, b = opponentOf(wk, a);
+      if (b == null || seen[a]) continue;
+      seen[a] = seen[b] = 1;
+      const pa = wk.teams[a].pts, pb = wk.teams[b].pts, aw = pa >= pb;
+      games.push({ w: aw ? a : b, l: aw ? b : a, pw: Math.max(pa, pb), pl: Math.min(pa, pb), m: Math.abs(pa - pb), playoff: !!wk.teams[a].playoff });
+    }
+    if (games.length) {
+      const byMargin = games.slice().sort((x, y) => x.m - y.m), close = byMargin[0], rout = byMargin[byMargin.length - 1];
+      const score = (g) => name(g.w) + ' ' + pts(g.pw) + ', ' + name(g.l) + ' ' + pts(g.pl);
+      if (close.m < 4) add('game', 8, pick(['Photo finish', 'Down to the wire', 'Nail-biter'], week, close.w) + ': ' + score(close),
+        'Just ' + pts(close.m) + ' points separated them' + (close.playoff ? ' with the season on the line.' : '. Somebody is already replaying their start/sit decisions.'));
+      if (rout.m >= 35) add('game', 7, pick(['Rout', 'No contest', 'Blowout'], week, rout.w) + ': ' + score(rout),
+        'A ' + pts(rout.m) + '-point margin. ' + pick(['The visiting fans were heading for the exits by halftime.', 'Concession lines were longer than the competitive portion of this one.', 'Ticket resale prices for the rematch are already falling.'], week, rout.l));
+      // upsets: a team well down the table beats one near the top
+      games.forEach((g) => {
+        const rw = before[g.w] && before[g.w].rank, rl = before[g.l] && before[g.l].rank;
+        if (week >= 3 && rw && rl && rw - rl >= 4) add('upset', 10, 'Upset: No. ' + rw + ' ' + name(g.w) + ' over No. ' + rl + ' ' + name(g.l),
+          'Nobody saw ' + pts(g.pw) + '–' + pts(g.pl) + ' coming. ' + pick(['The front office is said to be "cautiously ecstatic".', 'Expect the losing side\'s group chat to be quiet this week.', 'Bookmakers are reviewing their life choices.'], week, g.w));
+      });
+      const top = games.slice().sort((x, y) => y.pw - x.pw)[0];
+      add('high', 5, 'Week\'s high: ' + name(top.w) + ' put up ' + pts(top.pw), 'The best score in the league this week, in a ' + (top.m < 10 ? 'tight' : 'comfortable') + ' win over ' + name(top.l) + '.');
+    }
+    // player of the week
+    let star = null;
+    for (const id in wk.teams) (wk.teams[id].starters || []).forEach(([pid, p]) => { if (!star || p > star.p) star = { pid, p, rid: +id }; });
+    const pname = star && league.players && league.players[star.pid] && league.players[star.pid].n;
+    if (star && star.p >= 25 && pname) add('player', 6, 'Player of the week: ' + pname + ', ' + pts(star.p) + ' points', 'The top individual score in the league, for ' + name(star.rid) + '. ' + pick(['Jersey sales are expected to follow.', 'Expect a bobblehead night in their honour.', 'Rival owners are reportedly drafting trade offers.'], week, star.rid));
+    // streaks
+    Object.keys(wk.teams).forEach((id) => {
+      const n = streakAt(league, +id, week);
+      if (n >= 4) add('streak', 5, 'Hot streak: ' + name(+id) + ' win ' + n + ' straight', pick(['The district is buzzing and the merch stand cannot keep up.', 'Season-ticket inquiries are up sharply.', 'Rivals are running out of excuses.'], week, +id));
+      if (n <= -4) add('streak', 3, 'Skid: ' + name(+id) + ' drop ' + -n + ' in a row', pick(['Season-ticket holders are asking questions.', 'The front office insists the plan is working.', 'Even the hot dog cart looks worried.'], week, +id));
+    });
+    // the sim side: money, crowds, milestones
+    const ids = Object.keys(reps || {}).filter((id) => reps[id]);
+    if (ids.length) {
+      const rich = ids.slice().sort((a, b) => reps[b].net - reps[a].net)[0], poor = ids.slice().sort((a, b) => reps[a].net - reps[b].net)[0];
+      if (reps[rich].net > 0) add('money', 4, 'Biggest payday: ' + name(+rich) + ' bank ' + cash(reps[rich].net), 'The most profitable franchise in the league this week' + (reps[rich].sellout ? ', helped by a sold-out house.' : '.'));
+      if (reps[poor].net < 0) add('money', 3, 'In the red: ' + name(+poor) + ' lose ' + cash(reps[poor].net), pick(['Upkeep bills arrived before the revenue did.', 'Accountants have been asked to stop sighing audibly.', 'A rebuilding week, in every sense.'], week, +poor));
+      const sold = ids.filter((id) => reps[id].sellout).map((id) => name(+id));
+      if (sold.length) add('crowd', 4, sold.length === 1 ? 'Sold out: ' + sold[0] + ' pack the house' : 'Sellouts across the league', sold.length === 1 ? 'Not an empty seat in the building.' : sold.join(', ') + ' all filled every seat.');
+      ids.forEach((id) => (reps[id].badges || []).forEach((b) => add('milestone', 4, 'Milestone: ' + name(+id) + ' — ' + b.name, 'A ' + cash(b.reward) + ' bonus for the franchise.')));
+      const hot = ids.slice().sort((a, b) => (reps[b].hype[1] - reps[b].hype[0]) - (reps[a].hype[1] - reps[a].hype[0]))[0];
+      if (hot && reps[hot].hype[1] - reps[hot].hype[0] >= 8) add('crowd', 3, 'Fever pitch in ' + name(+hot), 'Hype climbed to ' + Math.round(reps[hot].hype[1]) + ' after this week.');
+    }
+    return out;
   }
 
   // ---- Weekly settlement -------------------------------------------------------------
@@ -998,13 +1115,14 @@ p.won { margin: 0; }
     const wg = s.wagers && s.wagers[playedKey(league, nx.week)];
     if (wg && wg.status === 'accepted') { attachWager(results, { from: s.rid, to: wg.opp, amount: wg.amount }); wg.status = 'settled'; wg.won = nx.result.wager ? nx.result.wager.won : null; }
     s.news = (s.news || []).concat(tradeNews(league, nx.week));
-    const rep = settle(s, nx.result);
+    const rep = settle(s, nx.result), reps = { [s.rid]: rep };
     s.played[playedKey(league, nx.week)] = 1;
     s.history.push(rep);
     for (const id in s.rivals) {
       const rr = results[id];
-      if (rr) { settle(s.rivals[id], rr); aiTurn(s.rivals[id]); }
+      if (rr) { reps[id] = settle(s.rivals[id], rr); aiTurn(s.rivals[id]); }
     }
+    s.news = s.news.concat(weekStories(league, nx.week, reps, (rid) => (rid === s.rid ? s.name : teamName(league, rid))));
     return rep;
   }
   /** League table of franchise values, the player's included. */
@@ -1027,7 +1145,7 @@ p.won { margin: 0; }
     key, isStadium, median, standings, teamName, weekResult, newGame, newFranchise, neighbors, nearStadium, onEdge,
     synergy, effects, forecast, value, build, upgrade, demolish, refund, upgradeStadium, settle, aiTurn,
     nextWeek, playWeek, leaderboard, clamp, slot, matchup, bonusTable, opponentOf, tradeImpact, playerAvg, travelers, attachTravel,
-    attachWager, tradeNews, railReady, buildRail, linked, wagerOpen, offerWagerSolo, proposeRailSolo, railPriceSolo,
+    attachWager, tradeNews, weekStories, streakAt, railReady, buildRail, linked, wagerOpen, offerWagerSolo, proposeRailSolo, railPriceSolo,
     TRADE_FEE, WAGER_MIN, WAGER_MAX, RAIL_COST, RAIL_LEVEL, RAIL_MAX, RAIL_RATE, MINI, MINI_TRIES, MINI_BOOST, MEDALS, miniMedal, recordMini,
   });
   if (typeof module !== 'undefined' && module.exports) module.exports = FT;
@@ -3307,6 +3425,7 @@ p.won { margin: 0; }
     const tb = LG && LG.view.bonus[r.week], row = tb && tb.rows.find((x) => x.rid === S.rid);
     if (row) h += '<div class="won"><p><b>Owner edge ' + (row.edge >= 0 ? '+' : '') + row.edge.toFixed(1) + '%</b> against your auto-pilot, ' + (tb.rows.indexOf(row) + 1) + ' of ' + tb.rows.length + ' in the league.' + (bonusMode() ? ' <em>+' + row.bonus.toFixed(1) + ' bonus points</em> for Week ' + (r.week + 1) + '.' : '') + '</p></div>';
     if (rep.badges.length) h += '<div class="won">' + rep.badges.map((b) => '<p><b>Milestone: ' + esc(b.name) + '</b> <em>+' + money(b.reward) + '</em></p>').join('') + '</div>';
+    if (heraldWeeks().indexOf(r.week) >= 0) h += '<button class="btn ghost wide" data-act="herald" data-v="' + r.week + '">Read this week\'s Daily Herald</button>';
     return h + '<button class="btn primary big" data-act="close">Back to the district</button>';
   }
   function openReport(rep) {
@@ -3465,11 +3584,59 @@ p.won { margin: 0; }
     else body = '<p class="fine">Wagers are closed for this week.</p>';
     return '<div class="card"><h3>Matchup wager</h3>' + body + '</div>';
   }
-  /** League news: trades, wagers and rail links. */
+  // ---- The Daily Herald --------------------------------------------------------------------
+  const CLASSIFIEDS = [
+    'FOR SALE: Bobbleheads, slightly used. Enquire at the Fan Plaza.',
+    'WANTED: Kicker who can hit from 40. Serious enquiries only.',
+    'LOST: One fantasy season. Last seen Week 3. Reward offered.',
+    'FOR RENT: Luxury suite, partial view, full price.',
+    'HELP WANTED: Concessions staff. Must pour a perfect pint.',
+    'SEEKING: Owner willing to take on a bad contract. Will pay in waiver priority.',
+    'FREE TO A GOOD HOME: Foam fingers, assorted colours.',
+    'NOTICE: The shuttle bus does not stop for cones. Ever.',
+    'WANTED: Scout with a good eye. Must name the best prospect in under three seconds.',
+    'FOR SALE: Bench player. Scored 40 last week, on the bench.',
+  ];
+  function heraldItems() {
+    const all = LG ? LG.view.news || [] : S.news || [];
+    return all.map((n) => ({ week: n.week, kind: n.kind, weight: n.weight || 4, head: n.head || n.text, body: n.head ? n.body || '' : '' }));
+  }
+  function heraldWeeks() { return Array.from(new Set(heraldItems().map((n) => n.week))).filter((w) => w > 0).sort((a, b) => a - b); }
+  /** A front-page teaser on the League tab. */
   function newsCard() {
-    const items = LG ? LG.view.news : (S.news || []).slice().reverse();
-    if (!items.length) return '';
-    return '<div class="card"><h3>League news</h3><ul class="news">' + items.slice(0, 15).map((n) => '<li><span>Wk ' + n.week + '</span>' + esc(n.text) + '</li>').join('') + '</ul></div>';
+    const weeks = heraldWeeks();
+    if (!weeks.length) return '';
+    const w = weeks[weeks.length - 1], lead = heraldItems().filter((n) => n.week === w).sort((a, b) => b.weight - a.weight)[0];
+    return '<button class="card teaser" data-act="herald" data-v="' + w + '"><span class="mast-sm">The Daily Herald</span><span class="ed">Week ' + w + ' edition</span><b>' + esc(lead.head) + '</b><em>Read the Herald →</em></button>';
+  }
+  function heraldHTML(w) {
+    const L2 = L, weeks = heraldWeeks(), i = weeks.indexOf(w);
+    const items = heraldItems().filter((n) => n.week === w).sort((a, b) => b.weight - a.weight);
+    const lead = items[0], second = items.slice(1, 3), briefs = items.slice(3);
+    const wk = L2.weeks[w], seen = {}, games = [];
+    if (wk) for (const id in wk.teams) { const a = +id, b = FT.opponentOf(wk, a); if (b == null || seen[a]) continue; seen[a] = seen[b] = 1; games.push([a, b]); }
+    const st = Object.values(FT.standings(L2, w)).sort((a, b) => a.rank - b.rank).slice(0, 6);
+    const nm = (rid) => esc(rid === S.rid ? S.name : FT.teamName(L2, rid));
+    const ads = [0, 1, 2].map((k) => CLASSIFIEDS[(w * 3 + k) % CLASSIFIEDS.length]);
+    let h = '<div class="paper" role="document">' +
+      '<div class="paper-top"><button class="pnav" data-act="herald" data-v="' + weeks[i - 1] + '"' + (i > 0 ? '' : ' disabled') + ' aria-label="Earlier edition">‹ Earlier</button><button class="pclose" data-act="heraldclose" aria-label="Close the Herald">Close ✕</button><button class="pnav" data-act="herald" data-v="' + weeks[i + 1] + '"' + (i < weeks.length - 1 ? '' : ' disabled') + ' aria-label="Later edition">Later ›</button></div>' +
+      '<header class="mast"><h1>The Daily Herald</h1><div class="dateline"><span>Vol. ' + esc(L2.season) + ' · No. ' + w + '</span><span>' + esc(L2.name) + '</span><span>Week ' + w + ' edition · 25¢</span></div></header>';
+    h += '<div class="paper-grid"><div class="paper-main">';
+    if (lead) h += '<article class="lead"><h2>' + esc(lead.head) + '</h2><p class="lede">' + esc(lead.body) + '</p></article>';
+    if (second.length) h += '<div class="seconds">' + second.map((n) => '<article><h3>' + esc(n.head) + '</h3><p>' + esc(n.body) + '</p></article>').join('') + '</div>';
+    if (briefs.length) h += '<section class="briefs"><h4>In brief</h4>' + briefs.map((n) => '<p><b>' + esc(n.head) + '.</b> ' + esc(n.body) + '</p>').join('') + '</section>';
+    if (!items.length) h += '<p class="lede">A quiet week around the league.</p>';
+    h += '</div><aside class="paper-side">';
+    if (games.length) h += '<section class="box"><h4>Scoreboard</h4><table>' + games.map(([a, b]) => { const pa = wk.teams[a].pts, pb = wk.teams[b].pts; return '<tr class="' + (pa >= pb ? 'wa' : 'wb') + '"><td>' + nm(a) + '</td><td>' + pa.toFixed(1) + '</td></tr><tr class="' + (pb > pa ? 'wa' : 'wb') + ' gap"><td>' + nm(b) + '</td><td>' + pb.toFixed(1) + '</td></tr>'; }).join('') + '</table></section>';
+    if (st.length) h += '<section class="box"><h4>Standings</h4><table>' + st.map((r) => '<tr><td>' + r.rank + '. ' + nm(r.rid) + '</td><td>' + r.w + '-' + r.l + (r.t ? '-' + r.t : '') + '</td></tr>').join('') + '</table></section>';
+    h += '<section class="box ads"><h4>Classifieds</h4>' + ads.map((a) => '<p>' + esc(a) + '</p>').join('') + '</section>';
+    return h + '</aside></div></div>';
+  }
+  function openHerald(w) {
+    let el = $('#herald');
+    if (!el) { el = document.createElement('div'); el.id = 'herald'; el.className = 'modal herald'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'The Daily Herald'); document.querySelector('.app').appendChild(el); el.addEventListener('click', (e) => { if (e.target === el) el.remove(); }); }
+    el.innerHTML = heraldHTML(+w); el.scrollTop = 0;
+    const c = el.querySelector('.pclose'); if (c) c.focus({ preventScroll: true });
   }
   function railCard() {
     const rows = boardRows().filter((x) => !x.me), mine = S.links || [];
@@ -3647,6 +3814,8 @@ p.won { margin: 0; }
     skip() { FT.setDemoWeek(L, L.demoThrough + 1); save(); render(); },
     newseason() { const seed = (L.seed || 2026) + 1; const nl = FT.demoLeague(seed, 3); nl.season = String(+L.season + 1); L = nl; S.wins = S.losses = 0; S.streak = 0; save(); render(); },
     mini(v) { playMini(v); },
+    herald(v) { $('#modal').hidden = true; openHerald(v); },
+    heraldclose() { const el = $('#herald'); if (el) el.remove(); },
     wager() {
       const amt = +$('#wager-amt').value;
       if (LG) return lact({ a: 'wager', amount: amt });
@@ -3724,7 +3893,7 @@ p.won { margin: 0; }
   });
   document.addEventListener('input', (e) => { if (e.target.id === 'set-cap') $('#set-cap-out').textContent = (+e.target.value).toFixed(1); if (e.target.id === 'set-cut') $('#set-cut-out').textContent = e.target.value + '%'; });
   document.addEventListener('submit', (e) => { if (e.target.id === 'connect') { e.preventDefault(); const u = $('#username').value.trim(); if (u) connect(u); } });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { $('#modal').hidden = true; $('#menu').hidden = true; } });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { $('#modal').hidden = true; $('#menu').hidden = true; const hd = $('#herald'); if (hd) hd.remove(); } });
   $('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') $('#modal').hidden = true; });
 
   async function boot() {

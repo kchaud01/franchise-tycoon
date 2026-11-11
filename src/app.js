@@ -368,6 +368,7 @@
     const tb = LG && LG.view.bonus[r.week], row = tb && tb.rows.find((x) => x.rid === S.rid);
     if (row) h += '<div class="won"><p><b>Owner edge ' + (row.edge >= 0 ? '+' : '') + row.edge.toFixed(1) + '%</b> against your auto-pilot, ' + (tb.rows.indexOf(row) + 1) + ' of ' + tb.rows.length + ' in the league.' + (bonusMode() ? ' <em>+' + row.bonus.toFixed(1) + ' bonus points</em> for Week ' + (r.week + 1) + '.' : '') + '</p></div>';
     if (rep.badges.length) h += '<div class="won">' + rep.badges.map((b) => '<p><b>Milestone: ' + esc(b.name) + '</b> <em>+' + money(b.reward) + '</em></p>').join('') + '</div>';
+    if (heraldWeeks().indexOf(r.week) >= 0) h += '<button class="btn ghost wide" data-act="herald" data-v="' + r.week + '">Read this week\'s Daily Herald</button>';
     return h + '<button class="btn primary big" data-act="close">Back to the district</button>';
   }
   function openReport(rep) {
@@ -526,11 +527,59 @@
     else body = '<p class="fine">Wagers are closed for this week.</p>';
     return '<div class="card"><h3>Matchup wager</h3>' + body + '</div>';
   }
-  /** League news: trades, wagers and rail links. */
+  // ---- The Daily Herald --------------------------------------------------------------------
+  const CLASSIFIEDS = [
+    'FOR SALE: Bobbleheads, slightly used. Enquire at the Fan Plaza.',
+    'WANTED: Kicker who can hit from 40. Serious enquiries only.',
+    'LOST: One fantasy season. Last seen Week 3. Reward offered.',
+    'FOR RENT: Luxury suite, partial view, full price.',
+    'HELP WANTED: Concessions staff. Must pour a perfect pint.',
+    'SEEKING: Owner willing to take on a bad contract. Will pay in waiver priority.',
+    'FREE TO A GOOD HOME: Foam fingers, assorted colours.',
+    'NOTICE: The shuttle bus does not stop for cones. Ever.',
+    'WANTED: Scout with a good eye. Must name the best prospect in under three seconds.',
+    'FOR SALE: Bench player. Scored 40 last week, on the bench.',
+  ];
+  function heraldItems() {
+    const all = LG ? LG.view.news || [] : S.news || [];
+    return all.map((n) => ({ week: n.week, kind: n.kind, weight: n.weight || 4, head: n.head || n.text, body: n.head ? n.body || '' : '' }));
+  }
+  function heraldWeeks() { return Array.from(new Set(heraldItems().map((n) => n.week))).filter((w) => w > 0).sort((a, b) => a - b); }
+  /** A front-page teaser on the League tab. */
   function newsCard() {
-    const items = LG ? LG.view.news : (S.news || []).slice().reverse();
-    if (!items.length) return '';
-    return '<div class="card"><h3>League news</h3><ul class="news">' + items.slice(0, 15).map((n) => '<li><span>Wk ' + n.week + '</span>' + esc(n.text) + '</li>').join('') + '</ul></div>';
+    const weeks = heraldWeeks();
+    if (!weeks.length) return '';
+    const w = weeks[weeks.length - 1], lead = heraldItems().filter((n) => n.week === w).sort((a, b) => b.weight - a.weight)[0];
+    return '<button class="card teaser" data-act="herald" data-v="' + w + '"><span class="mast-sm">The Daily Herald</span><span class="ed">Week ' + w + ' edition</span><b>' + esc(lead.head) + '</b><em>Read the Herald →</em></button>';
+  }
+  function heraldHTML(w) {
+    const L2 = L, weeks = heraldWeeks(), i = weeks.indexOf(w);
+    const items = heraldItems().filter((n) => n.week === w).sort((a, b) => b.weight - a.weight);
+    const lead = items[0], second = items.slice(1, 3), briefs = items.slice(3);
+    const wk = L2.weeks[w], seen = {}, games = [];
+    if (wk) for (const id in wk.teams) { const a = +id, b = FT.opponentOf(wk, a); if (b == null || seen[a]) continue; seen[a] = seen[b] = 1; games.push([a, b]); }
+    const st = Object.values(FT.standings(L2, w)).sort((a, b) => a.rank - b.rank).slice(0, 6);
+    const nm = (rid) => esc(rid === S.rid ? S.name : FT.teamName(L2, rid));
+    const ads = [0, 1, 2].map((k) => CLASSIFIEDS[(w * 3 + k) % CLASSIFIEDS.length]);
+    let h = '<div class="paper" role="document">' +
+      '<div class="paper-top"><button class="pnav" data-act="herald" data-v="' + weeks[i - 1] + '"' + (i > 0 ? '' : ' disabled') + ' aria-label="Earlier edition">‹ Earlier</button><button class="pclose" data-act="heraldclose" aria-label="Close the Herald">Close ✕</button><button class="pnav" data-act="herald" data-v="' + weeks[i + 1] + '"' + (i < weeks.length - 1 ? '' : ' disabled') + ' aria-label="Later edition">Later ›</button></div>' +
+      '<header class="mast"><h1>The Daily Herald</h1><div class="dateline"><span>Vol. ' + esc(L2.season) + ' · No. ' + w + '</span><span>' + esc(L2.name) + '</span><span>Week ' + w + ' edition · 25¢</span></div></header>';
+    h += '<div class="paper-grid"><div class="paper-main">';
+    if (lead) h += '<article class="lead"><h2>' + esc(lead.head) + '</h2><p class="lede">' + esc(lead.body) + '</p></article>';
+    if (second.length) h += '<div class="seconds">' + second.map((n) => '<article><h3>' + esc(n.head) + '</h3><p>' + esc(n.body) + '</p></article>').join('') + '</div>';
+    if (briefs.length) h += '<section class="briefs"><h4>In brief</h4>' + briefs.map((n) => '<p><b>' + esc(n.head) + '.</b> ' + esc(n.body) + '</p>').join('') + '</section>';
+    if (!items.length) h += '<p class="lede">A quiet week around the league.</p>';
+    h += '</div><aside class="paper-side">';
+    if (games.length) h += '<section class="box"><h4>Scoreboard</h4><table>' + games.map(([a, b]) => { const pa = wk.teams[a].pts, pb = wk.teams[b].pts; return '<tr class="' + (pa >= pb ? 'wa' : 'wb') + '"><td>' + nm(a) + '</td><td>' + pa.toFixed(1) + '</td></tr><tr class="' + (pb > pa ? 'wa' : 'wb') + ' gap"><td>' + nm(b) + '</td><td>' + pb.toFixed(1) + '</td></tr>'; }).join('') + '</table></section>';
+    if (st.length) h += '<section class="box"><h4>Standings</h4><table>' + st.map((r) => '<tr><td>' + r.rank + '. ' + nm(r.rid) + '</td><td>' + r.w + '-' + r.l + (r.t ? '-' + r.t : '') + '</td></tr>').join('') + '</table></section>';
+    h += '<section class="box ads"><h4>Classifieds</h4>' + ads.map((a) => '<p>' + esc(a) + '</p>').join('') + '</section>';
+    return h + '</aside></div></div>';
+  }
+  function openHerald(w) {
+    let el = $('#herald');
+    if (!el) { el = document.createElement('div'); el.id = 'herald'; el.className = 'modal herald'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'The Daily Herald'); document.querySelector('.app').appendChild(el); el.addEventListener('click', (e) => { if (e.target === el) el.remove(); }); }
+    el.innerHTML = heraldHTML(+w); el.scrollTop = 0;
+    const c = el.querySelector('.pclose'); if (c) c.focus({ preventScroll: true });
   }
   function railCard() {
     const rows = boardRows().filter((x) => !x.me), mine = S.links || [];
@@ -708,6 +757,8 @@
     skip() { FT.setDemoWeek(L, L.demoThrough + 1); save(); render(); },
     newseason() { const seed = (L.seed || 2026) + 1; const nl = FT.demoLeague(seed, 3); nl.season = String(+L.season + 1); L = nl; S.wins = S.losses = 0; S.streak = 0; save(); render(); },
     mini(v) { playMini(v); },
+    herald(v) { $('#modal').hidden = true; openHerald(v); },
+    heraldclose() { const el = $('#herald'); if (el) el.remove(); },
     wager() {
       const amt = +$('#wager-amt').value;
       if (LG) return lact({ a: 'wager', amount: amt });
@@ -785,7 +836,7 @@
   });
   document.addEventListener('input', (e) => { if (e.target.id === 'set-cap') $('#set-cap-out').textContent = (+e.target.value).toFixed(1); if (e.target.id === 'set-cut') $('#set-cut-out').textContent = e.target.value + '%'; });
   document.addEventListener('submit', (e) => { if (e.target.id === 'connect') { e.preventDefault(); const u = $('#username').value.trim(); if (u) connect(u); } });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { $('#modal').hidden = true; $('#menu').hidden = true; } });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { $('#modal').hidden = true; $('#menu').hidden = true; const hd = $('#herald'); if (hd) hd.remove(); } });
   $('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') $('#modal').hidden = true; });
 
   async function boot() {
