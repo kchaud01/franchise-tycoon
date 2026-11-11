@@ -1975,6 +1975,171 @@ p.won { margin: 0; }
     },
   };
 
+  // ---- life around the buildings ---------------------------------------------------------------
+  // Crowds grow with each building's level and with how the franchise is doing (hype and attendance),
+  // so a winning, sold-out district looks busier than a struggling one.
+  function busyOf(S, R) {
+    const h = S && typeof S.hype === 'number' ? S.hype / 100 : 0.6, f = R && typeof R.fill === 'number' ? R.fill : 0.6;
+    return Math.max(0.25, Math.min(1, h * 0.55 + f * 0.45));
+  }
+  const crowd = (base, per, lv, busy) => Math.max(0, Math.round((base + per * lv) * (0.45 + busy * 0.75)));
+  const depth = (a, b) => a[0] + a[1] - b[0] - b[1];
+  /** A line of people from the head (x, y), each next one (dx, dy) further back. Every few seconds it shuffles forward. */
+  function queue(ctx, x, y, dx, dy, n, z, t, seed, shirt) {
+    const cyc = (t * 0.012 + hash(seed, 1)) % 1, step = cyc > 0.85 ? (cyc - 0.85) / 0.15 : 0, ps = [];
+    for (let i = 0; i < n; i++) { const k = i - step; if (k > -0.5) ps.push([x + dx * k, y + dy * k, i]); }
+    ps.sort(depth).forEach(([px, py, i]) => person(ctx, px, py, seed + i, step > 0 ? t : t * 0.1, z, shirt));
+  }
+  /** n people walking from a to b and looping, evenly spaced. */
+  function walkers(ctx, ax, ay, bx, by, n, z, t, speed, seed, shirt, bag) {
+    const ps = [];
+    for (let i = 0; i < n; i++) { const f = (t * speed + i / n + hash(seed, i)) % 1; ps.push([ax + (bx - ax) * f, ay + (by - ay) * f, i]); }
+    ps.sort(depth).forEach(([px, py, i]) => person(ctx, px, py, seed + i, t, z, shirt, bag ? SHIRT[(seed + i * 3) % SHIRT.length] : null));
+  }
+  /** People spread over an area, bobbing (or jumping, when cheering). */
+  function gathering(ctx, x0, y0, x1, y1, n, z, t, seed, shirt, cheer) {
+    const ps = [];
+    for (let i = 0; i < n; i++) ps.push([x0 + hash(seed, i) * (x1 - x0), y0 + hash(seed + 7, i) * (y1 - y0), i]);
+    ps.sort(depth).forEach(([px, py, i]) => {
+      const hop = cheer ? Math.max(0, Math.sin(t * 0.5 + i * 1.7)) * 2.4 : 0;
+      person(ctx, px, py, seed + i, t * 0.15, (z || 0) + hop, typeof shirt === 'function' ? shirt(i) : shirt);
+    });
+  }
+  function smoke(ctx, x, y, z, t, seed) {
+    for (let k = 0; k < 4; k++) {
+      const f = (t * 0.03 + k / 4 + hash(seed, k)) % 1, p = P(x, y, z + f * 18);
+      ctx.save(); ctx.globalAlpha = 0.45 * (1 - f); ellipse(ctx, p[0] + f * 6, p[1], 2 + f * 4, 1.6 + f * 3, '#cfd3d8'); ctx.restore();
+    }
+  }
+  /** A light that alternates red and blue, staying lit at night. */
+  function beacon(ctx, x, y, z, t) {
+    const p = P(x, y, z), on = Math.floor(t / 4) % 2;
+    ellipse(ctx, p[0], p[1], 1.6, 1.2, on ? '#ff5a5a' : '#5aa0ff');
+    glow(ctx, p[0], p[1], 9, on ? '#ff5a5a' : '#5aa0ff', 0.9);
+  }
+  /** A vehicle that drives in along y, waits at `stop`, then drives on. cyc in [0,1). */
+  function arrive(cyc, from, stop, to) {
+    if (cyc < 0.3) return from + (stop - from) * (1 - Math.pow(1 - cyc / 0.3, 2));
+    if (cyc < 0.7) return stop;
+    return stop + (to - stop) * Math.pow((cyc - 0.7) / 0.3, 2);
+  }
+  const LIFE = {
+    concessions(ctx, gx, gy, lv, S, t, busy) {
+      if (lv === 1) {
+        queue(ctx, gx + 0.46, gy + 0.8, -0.07, 0.025, crowd(1, 1, lv, busy), 2, t, gx * 7 + gy);
+        gathering(ctx, gx + 0.18, gy + 0.36, gx + 0.34, gy + 0.4, crowd(0, 1, lv, busy), 2, t, 11);
+        return;
+      }
+      if (lv === 2) {
+        [0.1, 0.4, 0.7].forEach((x, s) => queue(ctx, gx + x + 0.11, gy + 0.86, 0.04, 0.035, crowd(0, 0.7, lv, busy), 2, t, s * 13 + gx));
+        smoke(ctx, gx + 0.3, gy + 0.2, 13, t, gx + gy);
+        return;
+      }
+      queue(ctx, gx + 0.5, gy + 0.84, 0.065, 0.02, crowd(1, 1, lv, busy), 2, t, gx * 3 + gy);
+      gathering(ctx, gx + 0.72, gy + 0.22, gx + 0.84, gy + 0.6, crowd(0, 1, lv, busy), 24, t, 31);
+    },
+    transit(ctx, gx, gy, lv, S, t, busy) {
+      if (lv === 1) { walkers(ctx, gx + 0.15, gy + 0.64, gx + 0.95, gy + 0.64, crowd(0, 1.5, lv, busy), 3.5, t, 0.004, gx + gy); return; }
+      if (lv === 2) {
+        queue(ctx, gx + 0.7, gy + 0.9, 0.05, 0.015, crowd(0, 1, lv, busy), 2, t, gx * 5 + gy);
+        walkers(ctx, gx + 0.9, gy + 0.68, gx + 0.66, gy + 0.9, crowd(0, 0.6, lv, busy), 2, t, 0.004, gx + 3);
+        return;
+      }
+      const n = crowd(0.5, 1, lv, busy);
+      walkers(ctx, gx + 0.16, gy + 0.72, gx + 0.46, gy + 0.65, n, 2, t, 0.004, gx + 1, null, true);
+      walkers(ctx, gx + 0.88, gy + 0.72, gx + 0.54, gy + 0.65, n, 2, t, 0.0045, gx + 9, null, true);
+    },
+    retail(ctx, gx, gy, lv, S, t, busy) {
+      if (lv === 1) { gathering(ctx, gx + 0.26, gy + 0.62, gx + 0.62, gy + 0.68, crowd(1, 1, lv, busy), 2, t, gx + 5); return; }
+      const door = lv === 2 ? [gx + 0.5, gy + 0.83] : [gx + 0.5, gy + 0.87];
+      walkers(ctx, door[0], door[1], gx + 0.95, gy + 0.95, crowd(0, 1, lv, busy), 2, t, 0.005, gx * 2 + gy, null, true);
+      walkers(ctx, gx + 0.08, gy + 0.95, door[0] - 0.02, door[1], crowd(0, 0.8, lv, busy), 2, t, 0.004, gx + 17);
+      if (lv === 3) gathering(ctx, gx + 0.16, gy + 0.88, gx + 0.42, gy + 0.94, crowd(1, 1, lv, busy), 2, t, 41, (i) => (i % 2 ? S.color : TRIM));
+    },
+    suites(ctx, gx, gy, lv, S, t, busy) {
+      if (lv === 1) { queue(ctx, gx + 0.5, gy + 0.81, 0.06, 0.02, crowd(1, 0.5, lv, busy), 2, t, gx + 3, '#2b333d'); return; }
+      const cyc = (t * 0.004 + hash(gx, gy)) % 1, x = arrive(cyc, gx - 0.05, gx + 0.32, gx + 1.05);
+      if (x > gx - 0.02 && x < gx + 0.98) {
+        const len = lv === 3 ? 0.4 : 0.22, col = lv === 3 ? '#14181e' : '#e8e2d0';
+        box(ctx, x - len / 2, gy + 0.85, len, 0.1, 2, 4, col);
+        box(ctx, x - len / 2 + 0.04, gy + 0.87, len - 0.08, 0.06, 6, 3, lv === 3 ? '#22303d' : '#23303f');
+      }
+      if (cyc > 0.32 && cyc < 0.68) walkers(ctx, gx + 0.32, gy + 0.84, gx + 0.5, gy + 0.8, 2, 2, t, 0.01, gx, '#2b333d');
+      person(ctx, gx + 0.58, gy + 0.82, 3, t * 0.1, 2, '#7a2f3a');
+    },
+    media(ctx, gx, gy, lv, S, t, busy) {
+      const air = Math.floor(t / 12) % 2 ? '#ff5a5a' : '#5a2020', a = P(gx + (lv === 1 ? 0.62 : 0.2), gy + (lv === 1 ? 0.75 : 0.83), lv === 1 ? 12 : 26);
+      ctx.fillStyle = air; ctx.fillRect(a[0] - 4, a[1] - 2, 8, 3.5);
+      if (air === '#ff5a5a') glow(ctx, a[0], a[1], 8, '#ff5a5a', 0.8);
+      if (lv >= 2) { // a camera crew interviewing someone out front
+        const c = P(gx + 0.3, gy + 0.92, 2);
+        ctx.strokeStyle = '#3d4957'; ctx.lineWidth = 0.8; [-3, 0, 3].forEach((d) => { ctx.beginPath(); ctx.moveTo(c[0], c[1] - 7); ctx.lineTo(c[0] + d, c[1]); ctx.stroke(); });
+        ctx.fillStyle = '#22282f'; ctx.fillRect(c[0] - 3, c[1] - 10, 6, 3.5);
+        person(ctx, gx + 0.42, gy + 0.94, 5, t * 0.1, 2); person(ctx, gx + 0.47, gy + 0.9, 6, t * 0.1, 2, S.color);
+      }
+      if (lv === 3) gathering(ctx, gx + 0.08, gy + 0.86, gx + 0.26, gy + 0.96, crowd(1, 1, lv, busy), 2, t, 51, null, true);
+    },
+    fanzone(ctx, gx, gy, lv, S, t, busy) {
+      const fan = (i) => (i % 3 ? S.color : TRIM);
+      if (lv === 1) {
+        gathering(ctx, gx + 0.44, gy + 0.4, gx + 0.7, gy + 0.5, crowd(1, 1, lv, busy), 2, t, 61, fan);
+        gathering(ctx, gx + 0.22, gy + 0.68, gx + 0.44, gy + 0.76, crowd(0, 1, lv, busy), 2, t, 62, fan);
+        smoke(ctx, gx + 0.82, gy + 0.4, 8, t, 3);
+        return;
+      }
+      if (lv === 2) { gathering(ctx, gx + 0.26, gy + 0.42, gx + 0.84, gy + 0.86, crowd(2, 2, lv, busy), 2, t, 71, fan, true); return; }
+      gathering(ctx, gx + 0.42, gy + 0.76, gx + 0.92, gy + 0.9, crowd(3, 2.5, lv, busy), 2, t, 81, fan, true);
+      gathering(ctx, gx + 0.1, gy + 0.54, gx + 0.4, gy + 0.68, crowd(1, 1, lv, busy), 2, t, 82, fan);
+    },
+    medical(ctx, gx, gy, lv, S, t, busy) {
+      if (lv === 1) { beacon(ctx, gx + 0.6, gy + 0.74, 11, t); return; }
+      if (lv === 2) {
+        const cyc = (t * 0.005 + hash(gx, gy)) % 1, x = arrive(cyc, gx - 0.05, gx + 0.3, gx + 1.05);
+        if (x > gx - 0.02 && x < gx + 0.98) {
+          box(ctx, x - 0.12, gy + 0.85, 0.24, 0.1, 2, 7, C.white);
+          wallRect(ctx, 'L', x - 0.12, gy + 0.85, 0.24, 0.1, 2, 0, 1, 2, 3.8, C.red);
+          beacon(ctx, x, gy + 0.9, 10, t);
+        }
+        walkers(ctx, gx + 0.3, gy + 0.85, gx + 0.38, gy + 0.69, crowd(0, 0.6, lv, busy), 2, t, 0.004, gx + 2);
+        return;
+      }
+      // a helicopter lands on the hospital roof and takes off again; athletes run the rooftop track
+      const x = gx + 0.08, y = gy + 0.1, cyc = (t * 0.003 + hash(gx, gy)) % 1;
+      const alt = cyc < 0.3 ? 60 * (1 - cyc / 0.3) : cyc < 0.6 ? 0 : 60 * ((cyc - 0.6) / 0.4);
+      if (cyc < 0.95) {
+        const h = P(x + 0.23, y + 0.26, 66 + alt);
+        ellipse(ctx, h[0], h[1], 7, 3.6, '#c9473c'); ctx.fillStyle = '#c9473c'; ctx.fillRect(h[0] + 4, h[1] - 1, 8, 1.6);
+        ellipse(ctx, h[0] - 3, h[1] - 0.6, 2.4, 1.6, '#9fd8ff');
+        const sp = t * 1.3; ctx.strokeStyle = 'rgba(40,46,56,.8)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(h[0] - Math.cos(sp) * 11, h[1] - 4 - Math.sin(sp) * 2.5); ctx.lineTo(h[0] + Math.cos(sp) * 11, h[1] - 4 + Math.sin(sp) * 2.5); ctx.stroke();
+        if (alt === 0) beacon(ctx, x + 0.23, y + 0.26, 68, t);
+      }
+      const tc = P(gx + 0.76, gy + 0.57, 24), runners = crowd(1, 1, lv, busy);
+      for (let i = 0; i < runners; i++) {
+        const an = t * 0.08 + (i / runners) * Math.PI * 2, lx = Math.cos(an) * 6, ly = Math.sin(an) * 13;
+        ctx.fillStyle = SHIRT[i % SHIRT.length]; ctx.fillRect(tc[0] + lx - ly - 1, tc[1] + 0.5 * lx + 0.5 * ly - 4, 2, 3.5);
+      }
+    },
+    scouting(ctx, gx, gy, lv, S, t, busy) {
+      const suit = '#2b333d';
+      if (lv === 1) { walkers(ctx, gx + 0.2, gy + 0.6, gx + 0.8, gy + 0.62, crowd(0, 1, lv, busy), 2, t, 0.003, gx + 4, '#e9dcc0'); return; }
+      if (lv === 2) { walkers(ctx, gx + 0.5, gy + 0.8, gx + 0.95, gy + 0.92, crowd(0, 0.8, lv, busy), 2, t, 0.004, gx + 6, suit); return; }
+      walkers(ctx, gx + 0.08, gy + 0.9, gx + 0.95, gy + 0.9, crowd(0.5, 1, lv, busy), 2, t, 0.003, gx + 8, suit);
+      queue(ctx, gx + 0.46, gy + 0.86, 0.06, 0.02, crowd(0, 0.7, lv, busy), 2, t, gx + 9, suit);
+    },
+  };
+  /** Fans crossing the stadium plaza toward the gates: more of them as the stadium grows and fills. */
+  R.drawFans = function (ctx) {
+    const S = this.state, n = Math.round((2 + S.stadium * 1.6) * (0.4 + (this.fill || 0.5) * 0.8)), fan = (i) => (i % 3 ? S.color : TRIM);
+    const side = (ax, ay, bx, by, seed) => {
+      const ps = [];
+      for (let i = 0; i < n; i++) { const f = (this.t * 0.0025 + i / n + hash(seed, i)) % 1; ps.push([ax + (bx - ax) * f, ay + (by - ay) * f, i]); }
+      ps.sort(depth).forEach(([px, py, i]) => person(ctx, px, py, seed + i, this.t, 2, fan(i)));
+    };
+    side(1.15, 2.9, 2.75, 2.9, 91);
+    side(2.9, 1.15, 2.9, 2.75, 92);
+  };
+
   R.drawLot = function (ctx, r, c) {
     const k = r + '-' + c, b = this.state.grid[k], gx = c, gy = r, m = 0.06;
     const isSel = this.selected === k, isHov = this.hover === k;
@@ -1985,6 +2150,7 @@ p.won { margin: 0; }
       if (hash(r, c) < 0.4) tree(ctx, gx + 0.3, gy + 0.3, 0.55);
     } else {
       DRAW[b.type](ctx, gx, gy, b.level, this.state, this.t, this);
+      LIFE[b.type](ctx, gx, gy, b.level, this.state, this.t, busyOf(this.state, this));
     }
     if (isSel || isHov) {
       const q = [P(gx + m, gy + m, 2), P(gx + 1 - m, gy + m, 2), P(gx + 1 - m, gy + 1 - m, 2), P(gx + m, gy + 1 - m, 2)];
@@ -2142,11 +2308,12 @@ p.won { margin: 0; }
   }
   const SKIN = ['#f1c9a5', '#c68e62', '#8d5a3b', '#e0ac7e'];
   const SHIRT = ['#e4572e', '#f2b33d', '#4f8fd9', '#3aa88f', '#e8e2d0', '#b06ab3', '#d9436b', '#7fb8e6'];
-  function person(ctx, x, y, i, t) {
-    const p = P(x, y, 0), step = Math.sin(t * 0.6 + i * 2.1) > 0 ? 1 : 0;
+  function person(ctx, x, y, i, t, z, shirt, bag) {
+    const p = P(x, y, z || 0), step = Math.sin(t * 0.6 + i * 2.1) > 0 ? 1 : 0;
     ctx.fillStyle = '#27303c'; ctx.fillRect(p[0] - 1.3, p[1] - 3, 1.1, 3 - step * 0.8); ctx.fillRect(p[0] + 0.2, p[1] - 3, 1.1, 2.2 + step * 0.8);
-    ctx.fillStyle = SHIRT[i % SHIRT.length]; ctx.fillRect(p[0] - 1.5, p[1] - 7.4, 3, 4.6);
+    ctx.fillStyle = shirt || SHIRT[i % SHIRT.length]; ctx.fillRect(p[0] - 1.5, p[1] - 7.4, 3, 4.6);
     ellipse(ctx, p[0], p[1] - 8.8, 1.5, 1.5, SKIN[i % SKIN.length]);
+    if (bag) { ctx.fillStyle = bag; ctx.fillRect(p[0] + 1.6, p[1] - 4.8, 2.4, 2.8); }
   }
 
   const TOWN = {
@@ -2668,7 +2835,7 @@ p.won { margin: 0; }
     order.sort((p, q) => p[0] + p[1] - q[0] - q[1] || p[1] - q[1]);
     let stadiumDone = false;
     order.forEach(([r, c]) => {
-      if (!stadiumDone && r + c > 3) { FLOOD = NIGHT; this.drawStadium(ctx); FLOOD = false; stadiumDone = true; } // floodlit at night
+      if (!stadiumDone && r + c > 3) { FLOOD = NIGHT; this.drawStadium(ctx); FLOOD = false; this.drawFans(ctx); stadiumDone = true; } // floodlit at night
       this.drawLot(ctx, r, c);
     });
     walkers.filter((p) => !p.back && !p.outer).sort(byDepth).forEach((p) => person(ctx, p.x, p.y, p.i, t));
@@ -2741,6 +2908,7 @@ p.won { margin: 0; }
       ctx.setTransform(dpr * sc, 0, 0, dpr * sc, dpr * w / 2, dpr * (h - 8 - 62 * sc));
       box(ctx, 0.06, 0.06, 0.88, 0.88, 0, 2, C.walk);
       DRAW[type](ctx, 0, 0, level, S, fake.t, fake);
+      LIFE[type](ctx, 0, 0, level, S, fake.t, 0.8);
     }
     FLOOD = false;
   };
