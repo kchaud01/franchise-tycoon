@@ -50,7 +50,20 @@ gcloud storage buckets add-iam-policy-binding gs://PROJECT-franchise-tycoon --me
 gcloud run deploy franchise-tycoon --source . --region us-central1 --allow-unauthenticated --max-instances 1 --execution-environment gen2 --set-env-vars CREATE_KEY=your-secret,DATA_FILE=/data/leagues.json --add-volume name=data,type=cloud-storage,bucket=PROJECT-franchise-tycoon --add-volume-mount volume=data,mount-path=/data
 ```
 
-To ship an update, run the last command again, or turn on continuous deployment (Cloud Run → your service → Set up continuous deployment → GitHub, branch `^main$`, build type Dockerfile) so every push to `main` deploys itself. Settings, the server key and the data bucket carry over between deploys.
+To ship an update, run the last command again. Settings, the server key and the data bucket carry over between deploys.
+
+### Automatic deploys
+
+`cloudbuild.yaml` builds the image and rolls the service onto it. To run it on every push to `main`:
+
+1. Connect the GitHub repository to Cloud Build once, in the console: Cloud Build → Triggers → **Connect repository** → GitHub (Cloud Build GitHub App), and select the repository. Skip the "create a trigger" step at the end.
+2. Create the trigger:
+
+```bash
+gcloud builds triggers create github --name=deploy-main --repo-owner=OWNER --repo-name=REPO --branch-pattern='^main$' --build-config=cloudbuild.yaml --service-account="projects/PROJECT/serviceAccounts/$(gcloud projects describe PROJECT --format='value(projectNumber)')-compute@developer.gserviceaccount.com"
+```
+
+3. Deploy the current code straight away: `gcloud builds triggers run deploy-main --branch=main`.
 
 ### Lost your commissioner link?
 
