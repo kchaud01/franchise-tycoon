@@ -1159,6 +1159,39 @@
     return { x: m0, y: m0 + L - f * L, along: 'y', back: true };
   }
 
+  /** A trade this week: a welcome banner and a jersey crowd, or fans with placards outside the stadium. */
+  R.drawMood = function (ctx) {
+    const S = this.state, up = this.mood.up, t = this.t, y = G + 0.13, x0 = 1.55, x1 = 3.45;
+    for (let i = 0; i < 16; i++) {
+      const x = x0 + 0.05 + (i / 15) * (x1 - x0 - 0.1), yy = y + 0.02 + (i % 3) * 0.035, p = P(x, yy, 0), hop = up ? Math.max(0, Math.sin(t * 0.45 + i)) * 2.5 : 0;
+      ctx.fillStyle = '#27303c'; ctx.fillRect(p[0] - 1.3, p[1] - 3 - hop, 1.1, 3); ctx.fillRect(p[0] + 0.2, p[1] - 3 - hop, 1.1, 3);
+      ctx.fillStyle = up ? (i % 3 ? S.color : TRIM) : ['#7a8794', '#55606f', '#8a6a58'][i % 3]; ctx.fillRect(p[0] - 1.5, p[1] - 7.4 - hop, 3, 4.6);
+      ellipse(ctx, p[0], p[1] - 8.8 - hop, 1.5, 1.5, SKIN[i % SKIN.length]);
+      if (!up && i % 2 === 0) { // placards
+        const bob = Math.sin(t * 0.3 + i) * 1;
+        ctx.strokeStyle = '#8a6240'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(p[0] + 1.5, p[1] - 8); ctx.lineTo(p[0] + 1.5, p[1] - 15 + bob); ctx.stroke();
+        ctx.fillStyle = '#f4f1ea'; ctx.fillRect(p[0] - 3, p[1] - 21 + bob, 9, 6);
+        ctx.strokeStyle = C.red; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p[0] - 1, p[1] - 20 + bob); ctx.lineTo(p[0] + 4, p[1] - 16 + bob); ctx.moveTo(p[0] + 4, p[1] - 20 + bob); ctx.lineTo(p[0] - 1, p[1] - 16 + bob); ctx.stroke();
+      }
+    }
+    const zt = up ? 26 : 18, zb = up ? 16 : 11;
+    post(ctx, x0, y, 0, zt, '#8a95a3', 1.4); post(ctx, x1, y, 0, zt, '#8a95a3', 1.4);
+    poly(ctx, [P(x0, y, zb), P(x1, y, zb), P(x1, y, zt), P(x0, y, zt)], up ? S.color : '#efe9dc');
+    const label = (up ? 'WELCOME ' : 'COME BACK ') + (this.mood.name || '').toUpperCase();
+    wallText(ctx, 'L', x0 + 0.12, y, zb + 2.5, label.slice(0, 22), 7.5, up ? '#ffffff' : C.red);
+  };
+  /** An elevated line leaving town toward a linked city, with a train shuttling along it. */
+  R.drawRail = function (ctx, name, k) {
+    const S = this.state, y = [2.42, 1.15, 3.7][k] || 2.42, xa = G + 0.86, xb = G + E - 0.04, z = 30;
+    for (let x = xa + 0.15; x < xb; x += 0.55) box(ctx, x, y + 0.02, 0.06, 0.06, 0, z, '#9aa1ab');
+    box(ctx, xa, y - 0.04, xb - xa, 0.14, z, 3, '#c5ccd6');
+    const f = ((this.t * 0.006 + k * 0.33) % 1), len = 0.7, tx = xa + f * (xb - xa - len);
+    box(ctx, tx, y - 0.02, len, 0.1, z + 3, 6, '#f1f4f7');
+    wallRect(ctx, 'L', tx, y - 0.02, len, 0.1, z + 3, 0, 1, 0.5, 1.8, S.color);
+    wallRect(ctx, 'L', tx, y - 0.02, len, 0.1, z + 3, 0.04, 0.96, 2.6, 4.6, '#9fd8ff');
+    wallText(ctx, 'L', xb - 0.95, y + 0.1, z + 3.5, 'TO ' + String(name).toUpperCase().slice(0, 18), 5.5, '#f4f1ea');
+  };
+
   R.draw = function () {
     const ctx = this.ctx, S = this.state, t = this.t;
     NIGHT = !!this.night; FLOOD = false; TRIM = S && S.color2 ? S.color2 : '#eef1f4';
@@ -1210,6 +1243,8 @@
     walkers.filter((p) => !p.back && p.outer).sort(byDepth).forEach((p) => person(ctx, p.x, p.y, p.i, t));
     lamps.filter((p) => !p.back).forEach((p) => lamp(ctx, p.x, p.y));
     this.drawTown(ctx, false);
+    if (this.mood) this.drawMood(ctx);
+    (this.rails || []).forEach((name, k) => this.drawRail(ctx, name, k));
     rim.filter((p) => !p.back).forEach(rimTree);
     // fireworks
     this.particles = this.particles.filter((p) => p.life > 0);

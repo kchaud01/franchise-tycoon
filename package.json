@@ -7,7 +7,7 @@
   "scripts": {
     "build": "node build.js",
     "start": "node build.js && node server.js",
-    "test": "node test/sim.js && node test/sleeper-mock.js && node test/league.js && node test/mini.js",
+    "test": "node test/sim.js && node test/sleeper-mock.js && node test/league.js && node test/mini.js && node test/deals.js",
     "test:browser": "node build.js && node test/flow.js && node test/league-browser.js",
     "shots": "node build.js && node test/shot.js"
   }

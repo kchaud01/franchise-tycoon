@@ -179,6 +179,7 @@
         tradeLine(r.trade) + travelLine(soloTravel(r)) +
         (r.night && !r.bye ? '<p class="linkline">Prime-time night game: broadcast rights pay +25%' + (r.home ? ' and concessions +10%.' : '.') + '</p>' : '') +
         (nx.backlog > 1 ? '<p class="pill">' + nx.backlog + ' finished weeks waiting to be played</p>' : '') + '</div>';
+      if (S.wagers && S.wagers[L.season + ':' + nx.week]) h += wagerCardSolo(nx.week);
       if (r.home) h += crowdCard(f);
       if (!r.bye) h += promoCard(r);
       h += miniList();
@@ -196,6 +197,7 @@
       }
       h += '<div class="card match"><div class="kicker">Week ' + nx.week + ' · ' + (nx.status === 'live' ? 'In progress' : 'Not started') + '</div><h2>Waiting on the final whistle</h2>' + live +
         '<p>Game day opens once ' + (L.source === 'demo' ? 'the demo week ends' : 'Sleeper finalizes Week ' + nx.week + ', usually Tuesday morning') + '. Until then, build with what you have.</p></div>' +
+        wagerCardSolo(nx.week) +
         (L.source === 'demo' ? '<button class="btn primary big" data-act="skip">Skip ahead a week</button>' : '<button class="btn primary big" data-act="sync"' + (busy ? ' disabled' : '') + '>Sync with Sleeper</button>');
     }
     if (notice) h += '<p class="fine notice" role="status">' + esc(notice) + '</p>';
@@ -323,7 +325,7 @@
   }
   function viewLeague() {
     const rows = LG ? LG.view.board : FT.leaderboard(S, L);
-    return visitGames() + '<div class="card"><h3>Franchise values</h3><p class="fine">' + (LG ? 'Every owner in the league runs their own franchise on the league server. These are their real districts.' : 'Every manager in your league runs a franchise off their own fantasy results. Rival owners build automatically.') + '</p>' +
+    return visitGames() + newsCard() + railCard() + '<div class="card"><h3>Franchise values</h3><p class="fine">' + (LG ? 'Every owner in the league runs their own franchise on the league server. These are their real districts.' : 'Every manager in your league runs a franchise off their own fantasy results. Rival owners build automatically.') + '</p>' +
       '<div class="scroll"><table><thead><tr><th>#</th><th>Franchise</th><th>Record</th><th>Fans</th><th>Value</th></tr></thead><tbody>' +
       rows.map((x, i) => '<tr class="' + (x.me ? 'me' : '') + '"><td>' + (i + 1) + '</td><td>' + (x.me ? esc(x.name) : '<button class="linkbtn" data-act="visit" data-v="' + x.rid + '">' + esc(x.name) + '</button>') + '</td><td>' + x.record + '</td><td>' + num(x.fans) + '</td><td>' + money(x.value) + '</td></tr>').join('') +
       '</tbody></table></div><p class="fine">Tap a franchise to visit its city.</p></div>';
@@ -393,6 +395,10 @@
     const last = S.history[S.history.length - 1];
     if (last && !last.r.bye) renderer.score = Math.round(last.r.pts) + '-' + Math.round(last.r.oppPts);
     const lastHome = S.history.slice().reverse().find((x) => x.home);
+    // a trade shows up in the city for the week it happened: a welcome banner, or fans protesting a sale
+    const tr = !away && shown && shown.trade && Math.abs(shown.trade.net) >= 1 ? shown.trade : null;
+    renderer.mood = tr ? { up: tr.net > 0, name: (tr.net > 0 ? tr.in[0] : tr.out[0] || {}).n || '' } : null;
+    renderer.rails = away ? [] : (S.links || []).map((r) => FT.teamName(L, r));
     if (away) renderer.score = null; // the visitor's own scoreline does not belong on someone else's board
     renderer.fill = away ? away.fill : lastHome ? lastHome.attendance / lastHome.capacity : Math.min(1, FT.forecast(S).attendance / FT.forecast(S).capacity);
   }
@@ -488,6 +494,61 @@
   }
   const payoutText = (p) => (p === 'top3' ? 'the top three owners' : p === 'half' ? 'the top half of the league' : 'everyone above last place');
 
+  // ---- deals between owners --------------------------------------------------------------
+  const WAGER_STEPS = [10e3, 25e3, 50e3, 100e3, 250e3];
+  function wagerForm(oppName) {
+    const steps = WAGER_STEPS.filter((x) => x <= S.cash);
+    if (!steps.length) return '<p class="fine">You need at least ' + money(FT.WAGER_MIN) + ' in cash to bet.</p>';
+    return '<div class="row"><label class="sr" for="wager-amt">Amount</label><select id="wager-amt">' + steps.map((x) => '<option value="' + x + '"' + (x === 50e3 ? ' selected' : '') + '>' + money(x) + '</option>').join('') +
+      '</select><button class="btn primary" data-act="wager">Challenge ' + esc(oppName) + '</button></div>';
+  }
+  function wagerCardSolo(week) {
+    const m = FT.matchup(L, week, S.rid);
+    if (!m || m.bye) return '';
+    const w = S.wagers && S.wagers[L.season + ':' + week];
+    let body;
+    if (w) body = w.status === 'accepted' ? '<p><b>Bet on:</b> ' + money(w.amount) + ' with ' + esc(m.oppName) + '. Whoever wins the real matchup takes it.</p>'
+      : w.status === 'declined' ? '<p>' + esc(m.oppName) + ' turned down your ' + money(w.amount) + ' challenge.</p>'
+      : '<p>Settled: ' + (w.won == null ? 'a push.' : w.won ? 'you won ' + money(w.amount) + '.' : 'you lost ' + money(w.amount) + '.') + '</p>';
+    else if (FT.wagerOpen(L, week, S.rid)) body = '<p class="fine">Bet sim cash on your real Week ' + week + ' matchup. The winner of the fantasy game takes it. Rivals who have scored more this season are happy to take you on.</p>' + wagerForm(m.oppName);
+    else body = '<p class="fine">Wagers close once the first points are scored.</p>';
+    return '<div class="card"><h3>Matchup wager</h3>' + body + '</div>';
+  }
+  function wagerCardLeague() {
+    const V = LG.view, m = FT.matchup(L, V.week, S.rid);
+    if (!m || m.bye) return '';
+    const w = V.wagers.find((x) => x.status === 'offered' || x.status === 'accepted');
+    let body;
+    if (w && w.status === 'accepted') body = '<p><b>Bet on:</b> ' + money(w.amount) + ' with ' + esc(m.oppName) + '. Whoever wins the real matchup takes it.</p>';
+    else if (w && w.to === S.rid) body = '<p><b>' + esc(m.oppName) + '</b> bets you ' + money(w.amount) + ' on this week\'s matchup.</p><div class="row"><button class="btn primary" data-act="wagerreply" data-v="1">Accept</button><button class="btn ghost" data-act="wagerreply" data-v="0">Decline</button></div>';
+    else if (w) body = '<p>You offered ' + esc(m.oppName) + ' ' + money(w.amount) + '. Waiting for an answer.</p><button class="btn ghost" data-act="wagercancel">Withdraw offer</button>';
+    else if (V.wagerOpen) body = '<p class="fine">Bet sim cash on your real matchup. Your opponent has until the lock to accept. Wager money counts in the standings but never in bonus points.</p>' + wagerForm(m.oppName);
+    else body = '<p class="fine">Wagers are closed for this week.</p>';
+    return '<div class="card"><h3>Matchup wager</h3>' + body + '</div>';
+  }
+  /** League news: trades, wagers and rail links. */
+  function newsCard() {
+    const items = LG ? LG.view.news : (S.news || []).slice().reverse();
+    if (!items.length) return '';
+    return '<div class="card"><h3>League news</h3><ul class="news">' + items.slice(0, 15).map((n) => '<li><span>Wk ' + n.week + '</span>' + esc(n.text) + '</li>').join('') + '</ul></div>';
+  }
+  function railCard() {
+    const rows = boardRows().filter((x) => !x.me), mine = S.links || [];
+    const ready = (x) => (LG ? x.rail : S.rivals[x.rid] && FT.railReady(S.rivals[x.rid]));
+    const offers = LG ? LG.view.railOffers : [];
+    let h = '<div class="card"><h3>Rail links</h3><p class="fine">Link your city to another by high-speed rail. Each side pays ' + money(FT.RAIL_COST) + '. Every week you earn tourism from the other city\'s fans, and when you play each other twice as many fans travel. Needs a level ' + FT.RAIL_LEVEL + ' Transit Hub on both sides; up to ' + FT.RAIL_MAX + ' links.</p>';
+    if (mine.length) h += '<p><b>Linked to:</b> ' + mine.map((r) => esc(FT.teamName(L, r))).join(', ') + '</p>';
+    offers.filter((o) => o.to === S.rid).forEach((o) => { h += '<div class="offer"><p><b>' + esc(FT.teamName(L, o.from)) + '</b> wants a rail link.</p><div class="row"><button class="btn primary small" data-act="railreply" data-v="' + o.from + '" data-accept="1">Build it</button><button class="btn ghost small" data-act="railreply" data-v="' + o.from + '" data-accept="0">Decline</button></div></div>'; });
+    offers.filter((o) => o.from === S.rid).forEach((o) => { h += '<div class="offer"><p>Waiting on ' + esc(FT.teamName(L, o.to)) + '.</p><button class="btn ghost small" data-act="railcancel" data-v="' + o.to + '">Withdraw</button></div>'; });
+    if (!FT.railReady(S)) h += '<p class="fine">' + (mine.length >= FT.RAIL_MAX ? 'You have used every rail slot.' : 'Build or upgrade a Transit Hub to level ' + FT.RAIL_LEVEL + ' to start.') + '</p>';
+    else {
+      const pending = (r) => offers.some((o) => o.from === r || o.to === r);
+      const cands = rows.filter((x) => mine.indexOf(x.rid) < 0 && !pending(x.rid));
+      h += cands.length ? '<div class="minis">' + cands.map((x) => '<button data-act="rail" data-v="' + x.rid + '"' + (ready(x) ? '' : ' disabled') + '><b>' + esc(x.name) + '</b><em>' + (!ready(x) ? 'Not ready' : LG ? 'Propose' : 'Build · ' + money(FT.railPriceSolo(S, x.rid))) + '</em><span>' + (!ready(x) ? 'No level ' + FT.RAIL_LEVEL + ' Transit Hub yet' : !LG && FT.railPriceSolo(S, x.rid) > FT.RAIL_COST ? 'They are short of cash, so you would cover their half too' : 'Has a level ' + FT.RAIL_LEVEL + ' Transit Hub') + '</span></button>').join('') + '</div>' : '';
+    }
+    return h + (notice && tab === 'league' ? '<p class="fine notice" role="status">' + esc(notice) + '</p>' : '') + '</div>';
+  }
+
   function viewGameLeague() {
     const V = LG.view, f = FT.forecast(S), m = FT.matchup(L, V.week, S.rid);
     let h = '';
@@ -503,6 +564,7 @@
         (m.night && !m.bye ? '<p class="linkline">Prime-time night game: broadcast rights pay +25%' + (m.home ? ' and concessions +10%.' : '.') + '</p>' : '') + '</div>';
       if (m.home) h += crowdCard(f);
       if (!m.bye) h += promoCard(m);
+      h += wagerCardLeague();
       h += miniList();
       h += '<p class="fine notice">Saved to the league server as you go. There is nothing to submit.</p>';
     } else {
@@ -646,6 +708,24 @@
     skip() { FT.setDemoWeek(L, L.demoThrough + 1); save(); render(); },
     newseason() { const seed = (L.seed || 2026) + 1; const nl = FT.demoLeague(seed, 3); nl.season = String(+L.season + 1); L = nl; S.wins = S.losses = 0; S.streak = 0; save(); render(); },
     mini(v) { playMini(v); },
+    wager() {
+      const amt = +$('#wager-amt').value;
+      if (LG) return lact({ a: 'wager', amount: amt });
+      const nx = FT.nextWeek(S, L), out = FT.offerWagerSolo(S, L, nx.week, amt);
+      notice = out.error || (out.accepted ? FT.teamName(L, out.opp) + ' accepted. ' + money(amt) + ' rides on the result.' : FT.teamName(L, out.opp) + ' turned you down.');
+      save(); render();
+    },
+    wagerreply(v) { lact({ a: 'wagerReply', accept: v === '1' }); },
+    wagercancel() { lact({ a: 'wagerCancel' }); },
+    rail(v) {
+      if (LG) return lact({ a: 'rail', to: +v });
+      const err = FT.proposeRailSolo(S, +v);
+      notice = err ? FT.teamName(L, +v) + ': ' + err : 'Rail link built to ' + FT.teamName(L, +v) + '.';
+      if (!err) (S.news = S.news || []).push({ week: FT.nextWeek(S, L).week || 0, kind: 'rail', text: 'A rail line now links ' + S.name + ' and ' + FT.teamName(L, +v) + '.' });
+      save(); render();
+    },
+    railreply(v, el) { lact({ a: 'railReply', with: +v, accept: el.dataset.accept === '1' }); },
+    railcancel(v) { lact({ a: 'railCancel', with: +v }); },
     guestmini(v) { const row = boardRows().find((x) => x.rid === visiting), d = row && districtOf(row); if (d) playMini(v, { color: d.color, name: row.name }); },
     customize() { $('#menu').hidden = true; visiting = null; selected = null; tab = 'style'; render(); },
     setcolor(v) { setStyle({ color: v }); },

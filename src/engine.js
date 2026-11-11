@@ -90,6 +90,11 @@
   const START_CASH = 700e3;
   const START_FANS = 20e3;
   const PAYROLL = 60e3;
+  // Deals between owners. Every franchise's auto-pilot twin settles the same deal lines, so deals never move the bonus edge.
+  const TRADE_FEE = 25e3;          // sim cash per point-a-game of star power a real trade moved
+  const WAGER_MIN = 10e3, WAGER_MAX = 250e3;
+  const RAIL_COST = 250e3, RAIL_LEVEL = 2, RAIL_MAX = 3;
+  const RAIL_RATE = 0.03 * 20;      // tourism: 3% of the partner's fanbase rides over each week and spends $20
   const SHARE = 110e3;
   const NIGHT_RATE = 38; // percent of regular-season games played at night
   const SALT = 281; // chosen so home and away weeks alternate reasonably
@@ -359,19 +364,62 @@
   // ---- Travelling fans ------------------------------------------------------------------
   /** How many of the away owner's fans follow the team to the host's stadium. Hype is the main driver; a Transit
       Hub and a win streak add to it. The host stadium only offers a fifth of its seats to visitors. */
+  const linked = (a, b) => !!(a && b && a.links && a.links.indexOf(b.rid) >= 0);
+  /** Can this franchise join a rail link? Needs a Transit Hub at RAIL_LEVEL or above and a free link slot. */
+  function railReady(f) {
+    return Object.values(f.grid).some((b) => b.type === 'transit' && b.level >= RAIL_LEVEL) && (f.links || []).length < RAIL_MAX;
+  }
+  /** Join two franchises by rail. Both pay RAIL_COST. Returns an error message, or null when built. */
+  function buildRail(a, b) {
+    if (!a || !b || a.rid === b.rid) return 'Pick another franchise.';
+    if (linked(a, b)) return 'Those cities are already linked.';
+    if (!railReady(a) || !railReady(b)) return 'Both cities need a level ' + RAIL_LEVEL + ' Transit Hub and a free rail slot (' + RAIL_MAX + ' at most).';
+    if (a.cash < RAIL_COST || b.cash < RAIL_COST) return 'Both owners need ' + (RAIL_COST / 1e3) + 'k in cash.';
+    [[a, b], [b, a]].forEach(([x, y]) => { x.cash -= RAIL_COST; x.invested += RAIL_COST; (x.links = x.links || []).push(y.rid); });
+    return null;
+  }
   function travelers(away, host) {
     const transit = Object.values(away.grid).filter((b) => b.type === 'transit').reduce((a, b) => a + b.level, 0);
-    const rate = 0.01 + 0.05 * (away.hype / 100) + 0.005 * Math.min(4, transit) + (away.streak >= 3 ? 0.01 : 0);
-    return Math.round(Math.min(away.fans * rate, STADIUM.cap[host.stadium - 1] * 0.2));
+    const rail = linked(away, host); // a direct line doubles the trip and opens more of the away end
+    const rate = (0.01 + 0.05 * (away.hype / 100) + 0.005 * Math.min(4, transit) + (away.streak >= 3 ? 0.01 : 0)) * (rail ? 2 : 1);
+    return Math.round(Math.min(away.fans * rate, STADIUM.cap[host.stadium - 1] * (rail ? 0.3 : 0.2)));
   }
   /** Tag each team's result with its travelling support. Call before any franchise is settled, so both sides of a
       matchup are measured from the same pre-game state. results: {rid: weekResult}, franchises: {rid: franchise}. */
-  function attachTravel(results, franchises) {
+  function attachTravel(results, franchises, nameOf) {
     for (const rid in results) {
       const r = results[rid], me = franchises[rid], opp = r && franchises[r.oppId];
       if (!r || r.bye || !me || !opp) continue;
       r.travel = r.home ? { in: travelers(opp, me), from: r.oppId } : { out: travelers(me, opp) };
+      if (linked(me, opp)) r.travel.rail = true;
     }
+    // rail tourism comes every week, opponent or not
+    for (const rid in results) {
+      const r = results[rid], me = franchises[rid];
+      if (r && me && me.links) r.rail = me.links.filter((p) => franchises[p]).map((p) => ({ rid: p, fans: franchises[p].fans, name: nameOf ? nameOf(p) : '' }));
+    }
+  }
+  /** Settle an accepted matchup wager onto both sides' results. w = {from, to, amount}. */
+  function attachWager(results, w) {
+    const a = results[w.from], b = results[w.to];
+    if (!a || !b || a.oppId !== w.to) return false;
+    const aw = a.tie ? null : a.win;
+    a.wager = { amount: w.amount, won: aw, opp: w.to };
+    b.wager = { amount: w.amount, won: aw === null ? null : !aw, opp: w.from };
+    return true;
+  }
+  /** One headline per real trade in a week, for the league news feed. */
+  function tradeNews(league, week) {
+    const nm = (id) => (league.players && league.players[id] && league.players[id].n) || 'a player';
+    return ((league.trades && league.trades[week]) || []).map((tr) => {
+      const parts = tr.rosters.map((rid) => {
+        const got = Object.keys(tr.adds || {}).filter((id) => tr.adds[id] === rid).map(nm);
+        return teamName(league, rid) + (got.length ? ' get ' + got.join(', ') : ' get draft picks');
+      });
+      const imp = tr.rosters.map((rid) => ({ rid, t: tradeImpact(league, week, rid) })).filter((x) => x.t).sort((p, q) => q.t.net - p.t.net);
+      const fee = imp.length && imp[0].t.net >= 0.5 ? ' ' + teamName(league, imp[0].rid) + ' pay a $' + Math.round((imp[0].t.net * TRADE_FEE) / 1e3) + 'k transfer fee.' : '';
+      return { week, kind: 'trade', text: 'Trade: ' + parts.join('; ') + '.' + fee };
+    });
   }
 
   // ---- Weekly settlement -------------------------------------------------------------
@@ -426,13 +474,13 @@
   function settle(s, r) {
     const e = effects(s);
     const lines = [];
-    const add = (label, amount, note) => { if (Math.round(amount)) lines.push({ label, amount: Math.round(amount), note }); };
+    const add = (label, amount, note, deal) => { if (Math.round(amount)) lines.push({ label, amount: Math.round(amount), note, deal: !!deal }); };
     const promo = s.promo || 'none';
     const beatMedian = r.pts > r.median;
     const scoreMult = r.median ? clamp(r.pts / r.median, 0.7, 1.5) : 1;
     const shootoutPromo = promo === 'shootout' && beatMedian ? 1.5 : 1;
     const tnet = r.trade ? r.trade.net : 0;
-    const rep = { r, lines, home: r.home, attendance: 0, capacity: e.capacity, sellout: false, limiter: null, promo, badges: [] };
+    const rep = { r, lines, deals: 0, home: r.home, attendance: 0, capacity: e.capacity, sellout: false, limiter: null, promo, badges: [] };
 
     if (r.home) {
       let demand = s.fans * turnoutRate(s);
@@ -460,6 +508,10 @@
       add('Watch Parties', s.fans * 0.2 * e.party * shootoutPromo, 'A fifth of the fanbase gathered at the Fan Plaza');
       if (r.travel && r.travel.out) add('Road Merchandise', r.travel.out * 6, r.travel.out.toLocaleString() + ' of your fans travelled to the game');
     }
+    // deals between owners
+    if (r.trade && Math.abs(tnet) >= 0.5) add('Transfer fee', -tnet * TRADE_FEE, tnet > 0 ? 'You paid for the star power your trade brought in' : 'Paid to you for the star power you traded away', true);
+    if (r.wager) add('Matchup wager', r.wager.won === true ? r.wager.amount : r.wager.won === false ? -r.wager.amount : 0, (r.wager.won === true ? 'You won your bet' : 'You lost your bet') + ' on the matchup', true);
+    (r.rail || []).forEach((p) => add('Rail tourism', p.fans * RAIL_RATE, 'Visitors riding in from ' + (p.name || 'a linked city'), true));
     const merchMult = (1 + 0.3 * r.stars) * (r.win ? 1.15 : 1) * (promo === 'guarantee' && r.win ? 1.2 : 1) * (1 + clamp(tnet * 0.04, 0, 0.5));
     add('Merchandise', s.fans * e.merch * merchMult * (r.bye ? 0.5 : 1),
       r.stars + (r.stars === 1 ? ' starter' : ' starters') + ' scored ' + STAR_PTS + '+' + (r.win ? ', plus a win bump' : '') + (tnet >= 1 ? ', plus a new-jersey rush from the trade' : ''));
@@ -507,6 +559,7 @@
     rep.hype = [hype0, s.hype];
     rep.fans = [fans0, s.fans];
     rep.net = lines.reduce((a, l) => a + l.amount, 0);
+    rep.deals = lines.reduce((a, l) => a + (l.deal ? l.amount : 0), 0);
     rep.gross = lines.reduce((a, l) => a + Math.max(0, l.amount), 0);
     s.cash += rep.net;
     if (rep.sellout) s.sellouts++;
@@ -550,6 +603,41 @@
     s.price = f.demand > Math.min(f.capacity, f.access) * 1.3 ? 2 : f.demand < Math.min(f.capacity, f.access) * 0.7 ? 0 : 1;
   }
 
+  // ---- Solo-play deals with computer-run rivals -----------------------------------------------
+  /** Can a wager still be placed on this week? Only before the first points are scored. */
+  function wagerOpen(league, week, rid) {
+    const m = matchup(league, week, rid), wk = league.weeks[week];
+    return !!m && !m.bye && !(wk && wk.complete) && !(m.pts > 0 || m.oppPts > 0);
+  }
+  /** Offer a computer-run rival a bet on this week's real matchup. Rivals take it when their own team has
+      scored more this season, and sometimes anyway; they never bet money they do not have. */
+  function offerWagerSolo(s, league, week, amount) {
+    const key = playedKey(league, week), m = matchup(league, week, s.rid);
+    if (!wagerOpen(league, week, s.rid)) return { error: 'Wagers close once the first points are scored.' };
+    if (!(amount >= WAGER_MIN && amount <= WAGER_MAX)) return { error: 'A wager is between $' + WAGER_MIN / 1e3 + 'k and $' + WAGER_MAX / 1e3 + 'k.' };
+    if (s.cash < amount) return { error: 'You do not have that much cash.' };
+    s.wagers = s.wagers || {};
+    if (s.wagers[key]) return { error: 'You already made an offer this week.' };
+    const rival = s.rivals[m.oppId], st = standings(league, week - 1);
+    const confident = (st[m.oppId] || { pf: 0 }).pf >= (st[s.rid] || { pf: 0 }).pf;
+    const accept = !!rival && rival.cash >= amount + 100e3 && (confident || ((week * 31 + m.oppId * 17) % 100) < 35);
+    s.wagers[key] = { opp: m.oppId, amount, status: accept ? 'accepted' : 'declined', week };
+    return { accepted: accept, opp: m.oppId };
+  }
+  /** What a solo rail link to this rival costs you: their half too, when they are short of cash. */
+  const railShort = (rival) => rival.cash < RAIL_COST + 100e3;
+  function railPriceSolo(s, rid) { const r = s.rivals[rid]; return r && railShort(r) ? 2 * RAIL_COST : RAIL_COST; }
+  /** Build a rail link with a computer-run rival. Rivals always agree; when they cannot spare their half
+      (they keep $100k back), you pay it for them. Returns an error message, or null when built. */
+  function proposeRailSolo(s, rid) {
+    const rival = s.rivals[rid];
+    if (!rival) return 'Pick another franchise.';
+    if (linked(s, rival) || !railReady(s) || !railReady(rival)) return buildRail(s, rival);
+    if (s.cash < railPriceSolo(s, rid)) return 'You need ' + Math.round(railPriceSolo(s, rid) / 1e3) + 'k in cash.';
+    if (railShort(rival)) { s.cash -= RAIL_COST; rival.cash += RAIL_COST; }
+    return buildRail(s, rival);
+  }
+
   // ---- Turn flow ---------------------------------------------------------------------
   const playedKey = (league, w) => league.season + ':' + w;
   /** What is the next game day and can it be played yet? */
@@ -573,7 +661,10 @@
     // travelling support is measured before anyone settles
     const results = { [s.rid]: nx.result }, all = { [s.rid]: s };
     for (const id in s.rivals) { results[id] = weekResult(league, nx.week, +id); all[id] = s.rivals[id]; }
-    attachTravel(results, all);
+    attachTravel(results, all, (rid) => (rid === s.rid ? s.name : teamName(league, rid)));
+    const wg = s.wagers && s.wagers[playedKey(league, nx.week)];
+    if (wg && wg.status === 'accepted') { attachWager(results, { from: s.rid, to: wg.opp, amount: wg.amount }); wg.status = 'settled'; wg.won = nx.result.wager ? nx.result.wager.won : null; }
+    s.news = (s.news || []).concat(tradeNews(league, nx.week));
     const rep = settle(s, nx.result);
     s.played[playedKey(league, nx.week)] = 1;
     s.history.push(rep);
@@ -602,7 +693,9 @@
     GRID, STADIUM_TILES, BUILDINGS, TYPES, STADIUM, PRICES, PROMOS, BADGES, STAR_PTS, BUST_PTS,
     key, isStadium, median, standings, teamName, weekResult, newGame, newFranchise, neighbors, nearStadium, onEdge,
     synergy, effects, forecast, value, build, upgrade, demolish, refund, upgradeStadium, settle, aiTurn,
-    nextWeek, playWeek, leaderboard, clamp, slot, matchup, bonusTable, opponentOf, tradeImpact, playerAvg, travelers, attachTravel, MINI, MINI_TRIES, MINI_BOOST, MEDALS, miniMedal, recordMini,
+    nextWeek, playWeek, leaderboard, clamp, slot, matchup, bonusTable, opponentOf, tradeImpact, playerAvg, travelers, attachTravel,
+    attachWager, tradeNews, railReady, buildRail, linked, wagerOpen, offerWagerSolo, proposeRailSolo, railPriceSolo,
+    TRADE_FEE, WAGER_MIN, WAGER_MAX, RAIL_COST, RAIL_LEVEL, RAIL_MAX, RAIL_RATE, MINI, MINI_TRIES, MINI_BOOST, MEDALS, miniMedal, recordMini,
   });
   if (typeof module !== 'undefined' && module.exports) module.exports = FT;
 })(typeof window !== 'undefined' ? window : globalThis);

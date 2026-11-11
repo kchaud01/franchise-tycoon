@@ -210,6 +210,14 @@ p.won { margin: 0; }
 .minis em { font: 600 14px var(--display); font-style: normal; color: var(--gold); }
 .minis span { grid-column: 1 / -1; font-size: 12.5px; color: var(--muted); }
 
+/* deals */
+.news { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; font-size: 13.5px; }
+.news li { display: grid; grid-template-columns: 44px 1fr; gap: 6px; }
+.news span { color: var(--gold); font: 600 13px var(--display); text-transform: uppercase; }
+.offer { border-top: 1px solid var(--line); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+#wager-amt { flex: 0 0 auto; width: auto; }
+
 /* game-day report */
 .modal { position: fixed; inset: 0; background: rgba(8, 12, 20, .72); display: grid; place-items: center; z-index: 20; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
 .modal-body { width: min(100%, 560px); max-height: 100%; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-top: 4px solid var(--team); border-radius: 10px; padding: 22px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 30px 80px rgba(0,0,0,.6); }

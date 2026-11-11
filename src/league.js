@@ -192,8 +192,15 @@
     through = Math.max(0, through);
     league.demoThrough = Math.min(league.lastWeek, through);
     for (let w = 1; w <= league.lastWeek; w++) {
-      league.weeks[w].complete = w <= league.demoThrough;
-      league.weeks[w].live = w === league.demoThrough + 1;
+      const wk = league.weeks[w], done = w <= league.demoThrough;
+      wk.complete = done;
+      wk.live = w === league.demoThrough + 1;
+      // an unplayed week keeps its fixtures but not its scores, so nothing is given away before kickoff
+      if (done && wk.hidden) { wk.teams = wk.hidden; delete wk.hidden; }
+      if (!done && !wk.hidden) {
+        wk.hidden = wk.teams; wk.teams = {};
+        for (const id in wk.hidden) { const t = wk.hidden[id]; wk.teams[id] = { pts: 0, mid: t.mid, starters: t.starters.map(([pid]) => [pid, 0]), bench: 0, playoff: t.playoff }; }
+      }
     }
   }
 

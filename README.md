@@ -57,7 +57,13 @@ Each owner is compared with an auto-pilot owner who had the same fantasy result 
 
 **Visiting fans.** On an away week a share of your fanbase travels (more with high hype, a Transit Hub and a win streak). They only get seats the home crowd left empty. The share of the building they fill cuts the bonus the home owner brings into that matchup, up to the commissioner's limit. A full house keeps them out.
 
-**Trades.** Completed Sleeper trades change fan mood in the week they happen: acquiring high scorers lifts hype, the home crowd and jersey sales; trading them away does the opposite. This affects franchises but not the bonus table, because each owner's auto-pilot gets the same trade.
+**Trades.** Completed Sleeper trades change fan mood in the week they happen: acquiring high scorers lifts hype, the home crowd and jersey sales; trading them away does the opposite. The side that gained star power also pays the other a transfer fee in sim cash, the trade makes the league news, and the city shows it (a welcome banner, or fans protesting outside the stadium).
+
+**Matchup wagers.** Before the first points are scored, challenge your real opponent to a sim-cash bet on the fantasy result. The server settles it from Sleeper.
+
+**Rail links.** Two owners with level 2 Transit Hubs can build a line between their cities for $250k each. Both earn weekly tourism from the other's fans, and twice as many fans travel when they play each other.
+
+Transfer fees, wagers and rail tourism count in the sim standings but never in bonus points.
 
 **Mini-games.** Every building has a short arcade game. Each owner gets three tries per building per week, and the best medal lifts that building by 4%, 7% or 10% on the next game day. Scores are reported by each owner's own browser, so the commissioner can switch the boost off on the Admin tab and leave the games as bragging rights.
 

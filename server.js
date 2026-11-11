@@ -106,7 +106,17 @@ function createApp(opts) {
     while (lg.week <= lg.data.lastWeek && lg.data.weeks[lg.week] && lg.data.weeks[lg.week].complete) {
       const rows = [], results = {}, pre = {}, cut = {};
       for (const id in lg.teams) { results[id] = FT.weekResult(lg.data, lg.week, +id); pre[id] = lg.teams[id].f; }
-      FT.attachTravel(results, pre);
+      FT.attachTravel(results, pre, (rid) => FT.teamName(lg.data, rid));
+      const wagers = (lg.wagers || {})[lg.week] || [], name = (rid) => FT.teamName(lg.data, rid), news = (lg.news = lg.news || []);
+      wagers.forEach((w) => {
+        if (w.status === 'offered') w.status = 'expired';
+        if (w.status !== 'accepted') return;
+        if (!FT.attachWager(results, w)) { w.status = 'void'; return; }
+        const won = results[w.from].wager.won;
+        w.status = 'settled'; w.winner = won === null ? null : won ? w.from : w.to;
+        news.push({ week: lg.week, kind: 'wager', text: w.winner == null ? name(w.from) + ' and ' + name(w.to) + ' tied, so their $' + w.amount / 1e3 + 'k wager is a push.' : name(w.winner) + ' won a $' + w.amount / 1e3 + 'k wager from ' + name(w.winner === w.from ? w.to : w.from) + '.' });
+      });
+      FT.tradeNews(lg.data, lg.week).forEach((n) => news.push(n));
       for (const id in lg.teams) {
         const r = results[id];
         if (!r) continue;
@@ -181,7 +191,7 @@ function createApp(opts) {
     const S = Object.assign({}, me.f, { name: FT.teamName(lg.data, who.rid), v: 1 });
     const board = Object.keys(lg.teams).map((id) => {
       const f = lg.teams[id].f, s = st[id] || { w: 0, l: 0, t: 0 };
-      return { rid: +id, me: +id === who.rid, name: FT.teamName(lg.data, +id), value: FT.value(f), fans: f.fans, stadium: f.stadium, lots: Object.keys(f.grid).length, gross: f.history.reduce((a, r) => a + r.gross, 0), net: f.history.reduce((a, r) => a + r.net, 0), district: { grid: f.grid, stadium: f.stadium, color: f.color, color2: f.color2, setting: f.setting, fill: Math.min(1, FT.forecast(f).attendance / FT.forecast(f).capacity) }, record: s.w + '-' + s.l + (s.t ? '-' + s.t : '') };
+      return { rid: +id, me: +id === who.rid, name: FT.teamName(lg.data, +id), value: FT.value(f), fans: f.fans, stadium: f.stadium, lots: Object.keys(f.grid).length, rail: FT.railReady(f), links: f.links || [], gross: f.history.reduce((a, r) => a + r.gross, 0), net: f.history.reduce((a, r) => a + r.net, 0), district: { grid: f.grid, stadium: f.stadium, color: f.color, color2: f.color2, setting: f.setting, fill: Math.min(1, FT.forecast(f).attendance / FT.forecast(f).capacity) }, record: s.w + '-' + s.l + (s.t ? '-' + s.t : '') };
     }).sort((a, b) => b.value - a.value);
     const v = {
       leagueMode: true, league: Object.assign({}, lg.data, { myRosterId: who.rid }), S, admin: !!who.admin, cap: lg.settings.cap, settings: lg.settings,
@@ -190,6 +200,10 @@ function createApp(opts) {
     };
     const mu = FT.matchup(lg.data, lg.week, who.rid);
     if (mu && !mu.bye && lg.teams[mu.oppId]) v.travel = mu.home ? { in: FT.travelers(lg.teams[mu.oppId].f, me.f) } : { out: FT.travelers(me.f, lg.teams[mu.oppId].f) };
+    v.news = (lg.news || []).slice(-40).reverse();
+    v.wagers = ((lg.wagers || {})[lg.week] || []).filter((w) => w.from === who.rid || w.to === who.rid);
+    v.wagerOpen = v.phase === 'open' && FT.wagerOpen(lg.data, lg.week, who.rid);
+    v.railOffers = (lg.railOffers || []).filter((o) => o.status === 'offered' && (o.from === who.rid || o.to === who.rid));
     if (who.admin) {
       v.invites = Object.keys(lg.tokens).map((t) => ({ rid: lg.tokens[t].rid, name: FT.teamName(lg.data, lg.tokens[t].rid), admin: !!lg.tokens[t].admin, token: t }));
     }
@@ -211,6 +225,50 @@ function createApp(opts) {
         needOpen(); must(FT.MINI[b.type] && typeof b.score === 'number' && isFinite(b.score), 'Unknown mini-game.');
         FT.recordMini(f, b.type, b.score);
         if (lg.settings.miniBoost === false && f.mini[b.type]) f.mini[b.type].boost = 0;
+        break;
+      }
+      case 'wager': { // offer this week's real opponent a cash bet on the fantasy result
+        needOpen();
+        const amt = Math.round(+b.amount), m = FT.matchup(lg.data, lg.week, who.rid);
+        must(FT.wagerOpen(lg.data, lg.week, who.rid), 'Wagers close once the first points are scored, and need an opponent.');
+        must(amt >= FT.WAGER_MIN && amt <= FT.WAGER_MAX, 'A wager is between $' + FT.WAGER_MIN / 1e3 + 'k and $' + FT.WAGER_MAX / 1e3 + 'k.');
+        must(f.cash >= amt, 'You do not have that much cash.');
+        const list = ((lg.wagers = lg.wagers || {})[lg.week] = lg.wagers[lg.week] || []);
+        must(!list.some((w) => (w.status === 'offered' || w.status === 'accepted') && [w.from, w.to].indexOf(who.rid) >= 0), 'You already have a wager on this matchup.');
+        list.push({ from: who.rid, to: m.oppId, amount: amt, status: 'offered' });
+        break;
+      }
+      case 'wagerReply': case 'wagerCancel': {
+        needOpen();
+        const w = ((lg.wagers || {})[lg.week] || []).find((x) => x.status === 'offered' && (b.a === 'wagerCancel' ? x.from : x.to) === who.rid);
+        must(w, 'There is no open wager offer.');
+        if (b.a === 'wagerCancel') { w.status = 'cancelled'; break; }
+        if (!b.accept) { w.status = 'declined'; break; }
+        must(FT.wagerOpen(lg.data, lg.week, who.rid), 'Wagers close once the first points are scored.');
+        must(f.cash >= w.amount && lg.teams[w.from].f.cash >= w.amount, 'Both owners need $' + w.amount / 1e3 + 'k in cash to lock this in.');
+        w.status = 'accepted';
+        (lg.news = lg.news || []).push({ week: lg.week, kind: 'wager', text: FT.teamName(lg.data, w.from) + ' and ' + FT.teamName(lg.data, w.to) + ' put $' + w.amount / 1e3 + 'k on their Week ' + lg.week + ' matchup.' });
+        break;
+      }
+      case 'rail': { // propose a rail link to another owner
+        const to = +b.to, other = lg.teams[to] && lg.teams[to].f;
+        must(other && to !== who.rid, 'Pick another owner.');
+        must(!FT.linked(f, other), 'Those cities are already linked.');
+        const offers = (lg.railOffers = lg.railOffers || []);
+        must(!offers.some((o) => o.status === 'offered' && ((o.from === who.rid && o.to === to) || (o.from === to && o.to === who.rid))), 'There is already an offer between you.');
+        must(FT.railReady(f), 'You need a level ' + FT.RAIL_LEVEL + ' Transit Hub and a free rail slot.');
+        offers.push({ from: who.rid, to, status: 'offered' });
+        break;
+      }
+      case 'railReply': case 'railCancel': {
+        const o = (lg.railOffers || []).find((x) => x.status === 'offered' && (b.a === 'railCancel' ? x.from === who.rid && x.to === +b.with : x.to === who.rid && x.from === +b.with));
+        must(o, 'There is no open rail offer.');
+        if (b.a === 'railCancel') { o.status = 'cancelled'; break; }
+        if (!b.accept) { o.status = 'declined'; break; }
+        const err = FT.buildRail(lg.teams[o.from].f, f);
+        must(!err, err);
+        o.status = 'built';
+        (lg.news = lg.news || []).push({ week: lg.week, kind: 'rail', text: 'A rail line now links ' + FT.teamName(lg.data, o.from) + ' and ' + FT.teamName(lg.data, o.to) + '.' });
         break;
       }
       case 'style': { // cosmetic only, so it is allowed even while the week is locked
