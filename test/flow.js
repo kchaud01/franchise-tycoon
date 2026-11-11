@@ -10,6 +10,9 @@ const assert = require('assert');
   const url = 'file://' + path.join(__dirname, '..', 'dist', 'franchise-tycoon.html');
   await page.goto(url);
   await page.click('[data-act="demo"]');
+  assert((await page.textContent('#panel')).includes('Your city'), 'a new franchise starts on the look panel');
+  await page.click('[data-act="setsetting"][data-v="beach"]'); await page.click('[data-act="setcolor2"][data-v="#22282f"]');
+  assert.deepStrictEqual(await page.evaluate(() => [window.FTApp.state.setting, window.FTApp.state.color2]), ['beach', '#22282f']);
   const lot = async (r, c) => {
     const p = await page.evaluate(([r, c]) => { const R = window.FTApp.renderer, b = document.querySelector('#city').getBoundingClientRect(); return [b.left + R.ox + (c - r) * 60 * R.scale, b.top + R.oy + (c + r + 1) * 30 * R.scale]; }, [r, c]);
     await page.mouse.click(p[0], p[1]);
@@ -41,6 +44,12 @@ const assert = require('assert');
   // solo play: visit a rival's city from the League tab
   await page.click('#tab-league'); await page.click('.linkbtn >> nth=0');
   assert(await page.locator('#visit:not([hidden])').count(), 'visiting banner shows');
+  assert((await page.textContent('#panel')).includes('Play their mini-games'));
+  if (await page.locator('[data-act="guestmini"]').count()) {
+    const before = JSON.stringify(await page.evaluate(() => window.FTApp.state.mini || {}));
+    await page.click('[data-act="guestmini"] >> nth=0'); await page.click('#mini-start'); await page.keyboard.press('Escape');
+    assert.strictEqual(JSON.stringify(await page.evaluate(() => window.FTApp.state.mini || {})), before, 'visitor play records nothing');
+  }
   await page.click('[data-act="gohome"]');
   // Sleeper path: an unknown username gives a readable error (needs network)
   await page.click('#btn-menu'); await page.click('#btn-switch');

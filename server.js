@@ -181,7 +181,7 @@ function createApp(opts) {
     const S = Object.assign({}, me.f, { name: FT.teamName(lg.data, who.rid), v: 1 });
     const board = Object.keys(lg.teams).map((id) => {
       const f = lg.teams[id].f, s = st[id] || { w: 0, l: 0, t: 0 };
-      return { rid: +id, me: +id === who.rid, name: FT.teamName(lg.data, +id), value: FT.value(f), fans: f.fans, stadium: f.stadium, lots: Object.keys(f.grid).length, gross: f.history.reduce((a, r) => a + r.gross, 0), net: f.history.reduce((a, r) => a + r.net, 0), district: { grid: f.grid, stadium: f.stadium, color: f.color, fill: Math.min(1, FT.forecast(f).attendance / FT.forecast(f).capacity) }, record: s.w + '-' + s.l + (s.t ? '-' + s.t : '') };
+      return { rid: +id, me: +id === who.rid, name: FT.teamName(lg.data, +id), value: FT.value(f), fans: f.fans, stadium: f.stadium, lots: Object.keys(f.grid).length, gross: f.history.reduce((a, r) => a + r.gross, 0), net: f.history.reduce((a, r) => a + r.net, 0), district: { grid: f.grid, stadium: f.stadium, color: f.color, color2: f.color2, setting: f.setting, fill: Math.min(1, FT.forecast(f).attendance / FT.forecast(f).capacity) }, record: s.w + '-' + s.l + (s.t ? '-' + s.t : '') };
     }).sort((a, b) => b.value - a.value);
     const v = {
       leagueMode: true, league: Object.assign({}, lg.data, { myRosterId: who.rid }), S, admin: !!who.admin, cap: lg.settings.cap, settings: lg.settings,
@@ -211,6 +211,12 @@ function createApp(opts) {
         needOpen(); must(FT.MINI[b.type] && typeof b.score === 'number' && isFinite(b.score), 'Unknown mini-game.');
         FT.recordMini(f, b.type, b.score);
         if (lg.settings.miniBoost === false && f.mini[b.type]) f.mini[b.type].boost = 0;
+        break;
+      }
+      case 'style': { // cosmetic only, so it is allowed even while the week is locked
+        if (b.color != null) { must(/^#[0-9a-f]{6}$/i.test(b.color), 'Unknown colour.'); f.color = b.color; }
+        if (b.color2 != null) { must(/^#[0-9a-f]{6}$/i.test(b.color2), 'Unknown colour.'); f.color2 = b.color2; }
+        if (b.setting != null) { must(['metro', 'mountain', 'river', 'beach'].indexOf(b.setting) >= 0, 'Unknown city setting.'); f.setting = b.setting; }
         break;
       }
       case 'color': must(/^#[0-9a-f]{6}$/i.test(b.v), 'Unknown colour.'); f.color = b.v; break;

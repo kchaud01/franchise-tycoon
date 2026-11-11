@@ -61,7 +61,9 @@ Each owner is compared with an auto-pilot owner who had the same fantasy result 
 
 **Mini-games.** Every building has a short arcade game. Each owner gets three tries per building per week, and the best medal lifts that building by 4%, 7% or 10% on the next game day. Scores are reported by each owner's own browser, so the commissioner can switch the boost off on the Admin tab and leave the games as bragging rights.
 
-**Visiting other cities.** On the League tab, tap any franchise to see that owner's city.
+**City looks.** Each owner picks two team colours and a setting (Metro, Mountain, Riverside or Beachfront) from Menu → Customize city. Looks never affect the rules.
+
+**Visiting other cities.** On the League tab, tap any franchise to see that owner's city. Tap a building there to play its mini-game as a visitor: for fun only, nothing is recorded for either owner.
 
 Commissioner settings (Admin tab): maximum points per week, the most a visiting crowd can cut a home owner's bonus, who is paid (everyone above last place, top half, or top three), playoff start week, last week of the season, whether bonuses apply in the playoffs, and the lock day and hour.
 

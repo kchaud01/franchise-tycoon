@@ -27,6 +27,9 @@ const rejects = async (p, status) => { try { await p; } catch (e) { assert.stric
   assert(!o.S.grid['0-1'], 'one owner cannot touch another franchise');
 
   v = await app.api('POST', U('/api/act?t=' + admin), { a: 'demoLock' });
+  v = await app.api('POST', U('/api/act?t=' + admin), { a: 'style', color2: '#22282f', setting: 'mountain' });
+  assert.strictEqual(v.board.find((x) => x.me).district.setting, 'mountain', 'looks can change while locked and are public');
+  await rejects(app.api('POST', U('/api/act?t=' + admin), { a: 'style', setting: 'moon' }), 400);
   assert.strictEqual(v.phase, 'locked');
   await rejects(app.api('POST', U('/api/act?t=' + admin), { a: 'build', k: '0-2', type: 'retail' }), 409);
   await rejects(app.api('POST', U('/api/act?t=' + owner), { a: 'promo', v: 'guarantee' }), 409);

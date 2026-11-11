@@ -103,7 +103,7 @@
   function begin(league, connection) {
     L = league; conn = connection;
     S = FT.newGame(L, { color: setup.color });
-    tab = 'game'; selected = null; notice = '';
+    tab = 'style'; selected = null; notice = ''; // a new franchise starts by choosing its look
     save(); showGame();
     if (L.source === 'sleeper') fetchNames();
   }
@@ -233,15 +233,17 @@
       return '<button data-act="mini" data-v="' + t + '"><b>' + esc(FT.MINI[t].name) + '</b><em>' + (m.medal ? '<i class="medal ' + MEDAL_CLASS[m.medal] + '">' + FT.MEDALS[m.medal] + '</i>' : left + ' left') + '</em><span>' + FT.BUILDINGS[t].name + (m.boost && miniOn() ? ' +' + Math.round(m.boost * 100) + '%' : '') + '</span></button>';
     }).join('') + '</div></div>';
   }
-  function playMini(type) {
+  /** guest = the visited city's look when playing in someone else's city: nothing is recorded. */
+  function playMini(type, guest) {
     const g = FT.MINI[type];
     FT.Mini.open({
-      game: g.game, title: g.name, building: FT.BUILDINGS[type].name, how: g.how, color: S.color,
-      status: () => miniStatus(type),
+      game: g.game, title: g.name, building: FT.BUILDINGS[type].name, how: g.how, color: guest ? guest.color : S.color,
+      status: () => (guest ? 'You are visiting ' + guest.name + ', so this is just for fun. Nothing is recorded for either of you.' : miniStatus(type)),
       onClose: () => render(),
       onFinish: async (score) => {
         const medal = FT.miniMedal(type, score), before = miniState(type);
         let counted = false;
+        if (guest) return { score: (g.lower ? score.toFixed(2) : score) + ' ' + g.unit, medal, line: (medal ? FT.MEDALS[medal] + ' standard.' : 'No medal standard.') + ' Played as a visitor.', triesLeft: 0 };
         if (miniOpen() && before.tries < FT.MINI_TRIES) {
           if (LG) { try { applyView(await api('act', { a: 'mini', type, score })); counted = true; } catch (e) { notice = e.message; } }
           else { counted = FT.recordMini(S, type, score).counted; save(); }
@@ -255,7 +257,7 @@
 
   function viewBuildInner() {
     if (!selected) {
-      return '<div class="card"><h3>Pick a lot on the map</h3><p>Empty lots have dashed outlines. Tap one to build, tap a building to upgrade it, or tap the stadium to expand it.</p></div>' +
+      return '<div class="card"><h3>Your city\'s look</h3><p class="fine">Team colours and a mountain, river, beach or metro setting.</p><button class="btn ghost wide" data-act="customize">Customize city</button></div><div class="card"><h3>Pick a lot on the map</h3><p>Empty lots have dashed outlines. Tap one to build, tap a building to upgrade it, or tap the stadium to expand it.</p></div>' +
         '<div class="card"><h3>What each building does</h3><ul class="catalog">' + FT.TYPES.map((t) => { const b = FT.BUILDINGS[t]; return '<li><b>' + b.name + '</b> <em>' + money(b.cost[0]) + '</em><span>' + b.link + '</span></li>'; }).join('') + '</ul></div>';
     }
     if (selected === 'stadium') {
@@ -285,7 +287,7 @@
     const f = S.rivals && S.rivals[row.rid];
     if (!f) return null;
     const fc = FT.forecast(f);
-    return { grid: f.grid, stadium: f.stadium, color: COLORS[(row.rid * 3 + 1) % COLORS.length], fill: Math.min(1, fc.attendance / fc.capacity) };
+    return { grid: f.grid, stadium: f.stadium, color: COLORS[(row.rid * 3 + 1) % COLORS.length], color2: COLORS2[row.rid % COLORS2.length], setting: SETTINGS[row.rid % SETTINGS.length][0], fill: Math.min(1, fc.attendance / fc.capacity) };
   }
   function visitBanner() {
     const el = $('#visit'), row = visiting != null && boardRows().find((x) => x.rid === visiting);
@@ -294,9 +296,34 @@
     el.innerHTML = '<button class="btn ghost small" data-act="visitstep" data-v="-1" aria-label="Previous city">‹</button><div><span>Visiting</span><b>' + esc(row.name) + '</b><em>' + FT.STADIUM.name[row.stadium - 1] + ' · ' + num(row.fans) + ' fans · ' + row.lots + (row.lots === 1 ? ' lot' : ' lots') + ' built · ' + money(row.value) + '</em></div><button class="btn ghost small" data-act="visitstep" data-v="1" aria-label="Next city">›</button><button class="btn primary small" data-act="gohome">Back to my city</button>';
     return districtOf(row);
   }
+  /** While visiting: the mini-games built into that city, playable for fun. */
+  function visitGames() {
+    const row = visiting != null && boardRows().find((x) => x.rid === visiting), d = row && districtOf(row);
+    if (!d) return '';
+    const owned = FT.TYPES.filter((t) => Object.values(d.grid).some((b) => b.type === t));
+    return '<div class="card"><div class="kicker">Visiting ' + esc(row.name) + '</div><h3>Play their mini-games</h3>' +
+      (owned.length ? '<p class="fine">Tap a building on the map or pick one here. Visitor games are for fun only: no tries used, no boosts earned.</p><div class="minis">' + owned.map((t) => '<button data-act="guestmini" data-v="' + t + '"><b>' + esc(FT.MINI[t].name) + '</b><em>Play</em><span>' + FT.BUILDINGS[t].name + '</span></button>').join('') + '</div>'
+        : '<p class="fine">This owner has not built anything yet, so there is nothing to play here.</p>') + '</div>';
+  }
+  const SETTINGS = [['metro', 'Metro', 'Downtown on every side, growing into a skyline.'], ['mountain', 'Mountain', 'Snow-capped peaks and pine forest behind the stadium, with a lodge.'], ['river', 'Riverside', 'A river with boats running along the front of town.'], ['beach', 'Beachfront', 'Sand, palms and surf on two sides.']];
+  const COLORS2 = ['#eef1f4', '#22282f'].concat(COLORS);
+  function viewStyle() {
+    const sw = (list, cur, act, label) => '<div class="swatches" role="radiogroup" aria-label="' + label + '">' + list.map((c) => '<button type="button" class="swatch' + (c === cur ? ' on' : '') + '" style="background:' + c + '" data-act="' + act + '" data-v="' + c + '" aria-label="' + label + ' ' + c + '" aria-pressed="' + (c === cur) + '"></button>').join('') + '</div>';
+    const cur = S.setting || 'metro';
+    return '<div class="card"><div class="kicker">Make it yours</div><h2>Your city</h2><p class="fine">Looks only: none of this changes money, fans or bonus points. Other owners see it when they visit.</p>' +
+      '<h3>Team colour</h3>' + sw(COLORS, S.color, 'setcolor', 'Team colour') +
+      '<h3>Second colour</h3>' + sw(COLORS2, S.color2 || '#eef1f4', 'setcolor2', 'Second colour') + '<p class="fine">Used for awning stripes, tents, flags and half your crowd.</p>' +
+      '<h3>Setting</h3><div class="promos">' + SETTINGS.map((x) => '<button data-act="setsetting" data-v="' + x[0] + '" class="' + (cur === x[0] ? 'on' : '') + '" aria-pressed="' + (cur === x[0]) + '"><b>' + x[1] + '</b><span>' + x[2] + '</span></button>').join('') + '</div>' +
+      (notice ? '<p class="fine notice" role="status">' + esc(notice) + '</p>' : '') +
+      '<button class="btn primary wide" data-act="tab" data-v="game">Done</button></div>';
+  }
+  function setStyle(patch) {
+    if (LG) return lact(Object.assign({ a: 'style' }, patch));
+    Object.assign(S, patch); save(); render();
+  }
   function viewLeague() {
     const rows = LG ? LG.view.board : FT.leaderboard(S, L);
-    return '<div class="card"><h3>Franchise values</h3><p class="fine">' + (LG ? 'Every owner in the league runs their own franchise on the league server. These are their real districts.' : 'Every manager in your league runs a franchise off their own fantasy results. Rival owners build automatically.') + '</p>' +
+    return visitGames() + '<div class="card"><h3>Franchise values</h3><p class="fine">' + (LG ? 'Every owner in the league runs their own franchise on the league server. These are their real districts.' : 'Every manager in your league runs a franchise off their own fantasy results. Rival owners build automatically.') + '</p>' +
       '<div class="scroll"><table><thead><tr><th>#</th><th>Franchise</th><th>Record</th><th>Fans</th><th>Value</th></tr></thead><tbody>' +
       rows.map((x, i) => '<tr class="' + (x.me ? 'me' : '') + '"><td>' + (i + 1) + '</td><td>' + (x.me ? esc(x.name) : '<button class="linkbtn" data-act="visit" data-v="' + x.rid + '">' + esc(x.name) + '</button>') + '</td><td>' + x.record + '</td><td>' + num(x.fans) + '</td><td>' + money(x.value) + '</td></tr>').join('') +
       '</tbody></table></div><p class="fine">Tap a franchise to visit its city.</p></div>';
@@ -356,7 +383,7 @@
     if ((tab === 'bonus' && !LG) || (tab === 'admin' && !(LG && LG.view.admin))) tab = 'game';
     $('#tab-bonus').hidden = !LG; $('#tab-bonus').textContent = LG && !bonusMode() ? 'Standings' : 'Bonus'; $('#tab-admin').hidden = !(LG && LG.view.admin);
     $('#btn-switch').hidden = $('#btn-reset').hidden = !!LG; $('#btn-leave').hidden = !LG;
-    $('#panel').innerHTML = tab === 'game' ? viewGame() : tab === 'build' ? viewBuild() : tab === 'league' ? viewLeague() : tab === 'bonus' ? viewBonus() : tab === 'admin' ? viewAdmin() : viewLedger();
+    $('#panel').innerHTML = tab === 'game' ? viewGame() : tab === 'build' ? viewBuild() : tab === 'league' ? viewLeague() : tab === 'bonus' ? viewBonus() : tab === 'admin' ? viewAdmin() : tab === 'style' ? viewStyle() : viewLedger();
     const away = visitBanner();
     renderer.state = away || S; renderer.selected = away ? null : selected;
     // the town shows the kickoff time of the game on screen: the report's game while it is open, otherwise the next one
@@ -386,12 +413,12 @@
           const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
           if (moved || Math.abs(dx) + Math.abs(dy) > 5) { moved = true; renderer.panBy(dx, dy); drag = { x: e.clientX, y: e.clientY }; cv.style.cursor = 'grabbing'; return; }
         }
-        renderer.hover = visiting != null ? null : pick(e); cv.style.cursor = renderer.hover ? 'pointer' : 'grab';
+        renderer.hover = pick(e); if (visiting != null && !(renderer.state.grid && renderer.state.grid[renderer.hover])) renderer.hover = null; cv.style.cursor = renderer.hover ? 'pointer' : 'grab';
       });
       const endDrag = () => { drag = null; };
       cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
       cv.addEventListener('pointerleave', () => { renderer.hover = null; });
-      cv.addEventListener('click', (e) => { if (moved) { moved = false; return; } if (visiting != null) return; const k = pick(e); selected = k; setup.confirm = null; if (k) tab = 'build'; render(); });
+      cv.addEventListener('click', (e) => { if (moved) { moved = false; return; } if (visiting != null) { const vr = boardRows().find((x) => x.rid === visiting), vd = vr && districtOf(vr), vk = pick(e); if (vd && vk && vd.grid[vk]) playMini(vd.grid[vk].type, { color: vd.color, name: vr.name }); return; } const k = pick(e); selected = k; setup.confirm = null; if (k) tab = 'build'; render(); });
       cv.addEventListener('wheel', (e) => {
         if (document.documentElement.scrollHeight > window.innerHeight + 2) return; // stacked phone layout: let the page scroll
         e.preventDefault(); const b = cv.getBoundingClientRect();
@@ -619,6 +646,11 @@
     skip() { FT.setDemoWeek(L, L.demoThrough + 1); save(); render(); },
     newseason() { const seed = (L.seed || 2026) + 1; const nl = FT.demoLeague(seed, 3); nl.season = String(+L.season + 1); L = nl; S.wins = S.losses = 0; S.streak = 0; save(); render(); },
     mini(v) { playMini(v); },
+    guestmini(v) { const row = boardRows().find((x) => x.rid === visiting), d = row && districtOf(row); if (d) playMini(v, { color: d.color, name: row.name }); },
+    customize() { $('#menu').hidden = true; visiting = null; selected = null; tab = 'style'; render(); },
+    setcolor(v) { setStyle({ color: v }); },
+    setcolor2(v) { setStyle({ color2: v }); },
+    setsetting(v) { setStyle({ setting: v }); },
     sync() { if (LG) return refresh(true); sync(); },
     bonusweek(v) { LG.bonusWeek = +v; render(); },
     sheetweek(v) { LG.sheetWeek = +v; render(); },
