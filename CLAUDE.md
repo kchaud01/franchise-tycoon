@@ -24,7 +24,7 @@ A stadium-district sim driven by a Sleeper fantasy football league. Solo play is
 - Home or away is a deterministic hash of week and the two roster ids, so both sides of a matchup agree.
 - Rival franchises (`state.rivals`) run the same `settle()` on their own fantasy results, then `aiTurn()`.
 - Do not add a build step or dependencies; the output must stay a single self-contained HTML file.
-- The town ring around the district (`TOWN_PLAN` / `TOWN` in `render.js`) is scenery only: no rules read it. Back rows hold the tall skyline; front rows stay low so they never hide the lots.
+- The town ring around the district (`TOWN_PLAN` / `TOWN` in `render.js`) is scenery only: no rules read it. It has five tiers keyed to the stadium level (farm village → metropolis): each `TOWN_PLAN` lot lists what stands there per tier, and `BUSY` sets cars, walkers and lamps. Back rows hold the tall skyline; front rows stay low so they never hide the lots.
 - Night games: `weekResult().night` (about 38% of regular-season games, every playoff game). Broadcast +25%, home concessions +10%. The renderer has no separate night art: every colour passes through `tone()`, which darkens surfaces at night and keeps the colours in `EMIT` lit. Add new light colours to `EMIT`.
 - Map view: wheel or the +/− buttons zoom, drag pans (`zoomBy`, `panBy`, `resetView`).
 

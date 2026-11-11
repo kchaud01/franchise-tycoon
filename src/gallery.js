@@ -10,6 +10,11 @@
   let h = '<section><h2>Stadium</h2><p>The centre of the district. It grows from a grass-banked community field into a concrete bowl, a double-deck stadium with a canopy, a roofed arena behind glass, and finally a fully enclosed dome.</p><div class="levels">';
   FT.STADIUM.name.forEach((name, i) => { h += card('stadium', i + 1, 'Level ' + (i + 1) + ' · ' + name, [i ? money(FT.STADIUM.cost[i]) + ' to expand' : 'Where you start', FT.STADIUM.cap[i].toLocaleString() + ' seats'], true); });
   h += '</div></section>';
+  const TOWNS = ['Farm village', 'Small town', 'Town', 'City', 'Metropolis'];
+  const TOWN_NOTES = ['Fields, barns, a general store and a dirt road.', 'Houses, a diner, a school and a town hall on a paved road.', 'Offices, apartments, a library, street lamps and crosswalks.', 'Towers on the skyline, townhouses and busier streets.', 'Glass skyscrapers, condos, a museum, a galleria and a gilded city hall.'];
+  h += '<section><h2>The town around you</h2><p>The scenery outside your district is tied to the stadium. Each expansion brings a bigger, busier and richer town.</p><div class="levels towns">';
+  TOWNS.forEach((name, i) => { h += card('town', i + 1, name, ['With the level ' + (i + 1) + ' stadium', TOWN_NOTES[i]], true); });
+  h += '</div></section>';
   FT.TYPES.forEach((t) => {
     const b = FT.BUILDINGS[t];
     h += '<section><h2>' + b.name + '</h2><p>' + b.blurb + '</p><p class="linkline">' + b.link + '</p><div class="levels">';

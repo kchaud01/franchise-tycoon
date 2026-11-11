@@ -1866,7 +1866,8 @@ tr.me td:first-child { box-shadow: inset 3px 0 0 var(--team); }
       box(ctx, x - 0.02, y - 0.02, w + 0.04, d + 0.04, h + 2, 2, shade(col, 0.25));
       box(ctx, x + 0.14, y + 0.16, 0.14, 0.14, h + 4, 9, '#7a5a3a');
     },
-    cityhall(ctx, gx, gy, v, S, t) {
+    cityhall(ctx, gx, gy, v, S, t, face, tier) {
+      const domeCol = tier >= 5 ? '#d8b45a' : '#6fae9a', domeTop = tier >= 5 ? '#f0d58a' : '#7dbba7';
       box(ctx, gx + 0.04, gy + 0.08, 0.92, 0.88, 2, 2.5, '#d9d3c4');
       box(ctx, gx + 0.09, gy + 0.11, 0.82, 0.78, 4.5, 2.5, '#cfc8b8');
       const x = gx + 0.14, y = gy + 0.14, w = 0.72, d = 0.62, z = 7, h = 26;
@@ -1879,9 +1880,9 @@ tr.me td:first-child { box-shadow: inset 3px 0 0 var(--team); }
       poly(ctx, [P(x, y + d + 0.02, z + h + 2.5), P(x + w, y + d + 0.02, z + h + 2.5), P(x + w / 2, y + d + 0.02, z + h + 14)], '#f1ecdc', '#a59d8a');
       const c = P(x + w / 2, y + d / 2 - 0.04, z + h + 2.5);
       ctx.fillStyle = '#d9d3c4'; ctx.fillRect(c[0] - 14, c[1] - 9, 28, 9); ellipse(ctx, c[0], c[1], 14, 7, '#c9c2b2');
-      ctx.beginPath(); ctx.ellipse(c[0], c[1] - 9, 14, 15, 0, Math.PI, 0); ctx.closePath(); ctx.fillStyle = '#6fae9a'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(c[0], c[1] - 9, 14, 15, 0, Math.PI, 0); ctx.closePath(); ctx.fillStyle = domeCol; ctx.fill();
       ctx.beginPath(); ctx.ellipse(c[0] + 4, c[1] - 9, 10, 15, 0, Math.PI * 1.5, 0); ctx.lineTo(c[0] + 4, c[1] - 9); ctx.closePath(); ctx.fillStyle = 'rgba(0,0,0,.16)'; ctx.fill();
-      ellipse(ctx, c[0], c[1] - 9, 14, 7, '#7dbba7');
+      ellipse(ctx, c[0], c[1] - 9, 14, 7, domeTop);
       ctx.fillStyle = '#e6dfcc'; ctx.fillRect(c[0] - 2, c[1] - 30, 4, 7);
       ellipse(ctx, c[0], c[1] - 31, 2.2, 2.2, '#ffd685'); glow(ctx, c[0], c[1] - 31, 9, '#ffd685', 0.7);
       const f = P(x + 0.08, y + d - 0.06, z + h + 2.5), wv = Math.sin(t * 0.25 + 1) * 1.4;
@@ -1968,20 +1969,118 @@ tr.me td:first-child { box-shadow: inset 3px 0 0 var(--team); }
       tree(ctx, gx + 0.5, gy + 0.5, 0.6);
     },
   };
-  // Scenery layout on the border of a 9x9 block around the district. [row, col, kind, variant]; back rows carry the skyline.
+  // ---- scenery that only appears at some town tiers ----------------------------------------
+  Object.assign(TOWN, {
+    field(ctx, gx, gy, v) {
+      const cols = v % 3 === 0 ? ['#b59a55', '#a48a48'] : v % 3 === 1 ? ['#5f9a52', '#528a47'] : ['#8a6a48', '#7a5c3e'];
+      for (let i = 0; i < 9; i++) poly(ctx, [P(gx + 0.06 + i * 0.098, gy + 0.06, 2), P(gx + 0.06 + (i + 1) * 0.098, gy + 0.06, 2), P(gx + 0.06 + (i + 1) * 0.098, gy + 0.94, 2), P(gx + 0.06 + i * 0.098, gy + 0.94, 2)], cols[i % 2]);
+      if (v % 3 === 0) [[0.3, 0.3], [0.62, 0.5], [0.34, 0.74]].forEach(([a, b]) => cyl(ctx, gx + a, gy + b, 4, 2, 5, '#d8c27a'));
+      if (v % 2) { post(ctx, gx + 0.7, gy + 0.3, 2, 13, '#6f4e33', 1.4); box(ctx, gx + 0.66, gy + 0.29, 0.08, 0.02, 9, 1.2, '#6f4e33'); ellipse(ctx, P(gx + 0.7, gy + 0.3, 15)[0], P(gx + 0.7, gy + 0.3, 15)[1], 2, 2, '#d8c27a'); }
+      for (let i = 0; i < 5; i++) post(ctx, gx + 0.06 + i * 0.22, gy + 0.96, 2, 6, '#6f4e33', 1);
+    },
+    barn(ctx, gx, gy) {
+      cyl(ctx, gx + 0.26, gy + 0.3, 8, 2, 26, '#aeb5bd'); ellipse(ctx, P(gx + 0.26, gy + 0.3, 28)[0], P(gx + 0.26, gy + 0.3, 28)[1] - 2, 8, 6, '#8a929c');
+      const x = gx + 0.36, y = gy + 0.3, w = 0.5, d = 0.42;
+      box(ctx, x, y, w, d, 2, 15, '#a8483c');
+      wallRect(ctx, 'L', x, y, w, d, 2, 0.34, 0.66, 0, 11, '#efe6d2'); wallRect(ctx, 'L', x, y, w, d, 2, 0.37, 0.63, 0.8, 10.2, '#8a3a30');
+      wallRect(ctx, 'R', x, y, w, d, 2, 0.4, 0.6, 9, 13, '#3d2a22');
+      gable(ctx, x - 0.02, y - 0.02, w + 0.04, d + 0.04, 17, 11, '#5a4a44', '#a8483c');
+      for (let i = 0; i < 6; i++) post(ctx, gx + 0.08 + i * 0.17, gy + 0.9, 2, 6, '#efe6d2', 1);
+      tree(ctx, gx + 0.14, gy + 0.74, 0.6);
+    },
+    woods(ctx, gx, gy, v) {
+      [[0.2, 0.18, 0.9], [0.56, 0.14, 0.7], [0.82, 0.3, 0.85], [0.36, 0.44, 1], [0.68, 0.58, 0.8], [0.18, 0.72, 0.75], [0.48, 0.82, 0.9], [0.84, 0.84, 0.65]]
+        .forEach(([a, b, s], i) => { if (hash(i, v) > 0.18) tree(ctx, gx + a, gy + b, s); });
+    },
+    store(ctx, gx, gy, v, S, t, face) {
+      const x = gx + 0.2, y = gy + 0.22, w = 0.58, d = 0.42;
+      box(ctx, x, y, w, d, 2, 15, '#a07a52');
+      wallRect(ctx, 'L', x, y, w, d, 2, 0.08, 0.38, 4, 11, C.lit); wallRect(ctx, 'L', x, y, w, d, 2, 0.44, 0.58, 0, 11, '#3d2a22'); wallRect(ctx, 'L', x, y, w, d, 2, 0.64, 0.92, 4, 11, C.lit);
+      box(ctx, x - 0.02, y + d, w + 0.04, 0.12, 13, 1.5, '#6f4e33'); post(ctx, x, y + d + 0.11, 2, 13, '#6f4e33'); post(ctx, x + w, y + d + 0.11, 2, 13, '#6f4e33');
+      box(ctx, x - 0.02, y - 0.02, w + 0.04, d + 0.04, 17, 1.5, '#6f4e33');
+      box(ctx, x + 0.08, y + 0.26, w - 0.16, 0.04, 18.5, 8, '#efe6d2'); wallText(ctx, 'L', x + 0.11, y + 0.3, 20, 'GENERAL', 6.5, '#3d2a22');
+      cyl(ctx, gx + 0.84, gy + 0.74, 3, 2, 5, '#6f4e33'); cyl(ctx, gx + 0.9, gy + 0.64, 3, 2, 5, '#8a6240');
+    },
+    skyscraper(ctx, gx, gy, v) {
+      const col = ['#3f7f98', '#55608f', '#2f8a84', '#6a7f96'][v % 4], h = 84 + ((v * 5) % 4) * 12, lit = v % 2 ? '#ffe2a6' : '#cfe9ff';
+      box(ctx, gx + 0.08, gy + 0.08, 0.84, 0.84, 2, 10, '#2f3948');
+      wallRect(ctx, 'L', gx + 0.08, gy + 0.08, 0.84, 0.84, 2, 0.06, 0.94, 2, 8, lit); wallRect(ctx, 'R', gx + 0.08, gy + 0.08, 0.84, 0.84, 2, 0.06, 0.94, 2, 8, shade(lit, -0.18));
+      box(ctx, gx + 0.16, gy + 0.16, 0.68, 0.68, 12, h * 0.62, col, { top: '#22303d' });
+      curtain(ctx, gx + 0.16, gy + 0.16, 0.68, 0.68, 12, h * 0.62, Math.round(h * 0.62 / 7), 6, v * 19 + 5, lit, 0.62);
+      box(ctx, gx + 0.26, gy + 0.26, 0.48, 0.48, 12 + h * 0.62, h * 0.38, shade(col, 0.12), { top: '#22303d' });
+      curtain(ctx, gx + 0.26, gy + 0.26, 0.48, 0.48, 12 + h * 0.62, h * 0.38, Math.round(h * 0.38 / 7), 4, v * 23 + 9, lit, 0.66);
+      box(ctx, gx + 0.25, gy + 0.25, 0.5, 0.5, 12 + h, 2.5, v % 2 ? '#d8b45a' : '#aeb5bd');
+      const p = post(ctx, gx + 0.5, gy + 0.5, 14 + h, 30 + h, '#c5ccd6', 1.4);
+      ellipse(ctx, p[0], p[1], 1.5, 1.5, '#ff5a5a');
+    },
+    condo(ctx, gx, gy, v) {
+      const x = gx + 0.16, y = gy + 0.18, w = 0.68, d = 0.62, h = 62 + (v % 2) * 10;
+      box(ctx, gx + 0.1, gy + 0.12, 0.8, 0.74, 2, 6, '#cfc8b8');
+      box(ctx, x, y, w, d, 8, h, '#eef1f4', { top: '#4c8a5c' });
+      for (let r = 0; r < Math.round(h / 9); r++) {
+        wallRect(ctx, 'L', x, y, w, d, 8, 0.04, 0.96, 3 + r * 9, 8 + r * 9, hash(r, v) < 0.7 ? '#ffe2a6' : '#5fb0c9');
+        wallRect(ctx, 'R', x, y, w, d, 8, 0.04, 0.96, 3 + r * 9, 8 + r * 9, hash(r, v + 3) < 0.6 ? shade('#ffe2a6', -0.18) : shade('#5fb0c9', -0.2));
+      }
+      [[0.22, 0.2], [0.5, 0.36]].forEach(([a, b]) => { const p = P(x + a, y + b, 8 + h); ellipse(ctx, p[0], p[1] - 4, 5, 5, '#3f8f5d'); });
+    },
+    museum(ctx, gx, gy, v, S) {
+      box(ctx, gx + 0.04, gy + 0.08, 0.92, 0.88, 2, 2.5, '#e6e9ee');
+      const x = gx + 0.1, y = gy + 0.14, w = 0.8, d = 0.6;
+      box(ctx, x, y, w, d, 4.5, 16, '#f4f6f8');
+      wallRect(ctx, 'L', x, y, w, d, 4.5, 0.06, 0.94, 2, 13, '#cfe9ff'); for (let c = 1; c < 8; c++) wallRect(ctx, 'L', x, y, w, d, 4.5, c / 8 - 0.01, c / 8 + 0.01, 2, 13, '#f4f6f8');
+      wallRect(ctx, 'R', x, y, w, d, 4.5, 0.1, 0.9, 2, 13, shade('#cfe9ff', -0.2));
+      vault(ctx, x + 0.04, y + 0.04, w - 0.08, d - 0.08, 20.5, 13, '#dfe6ee', 5);
+      wallRect(ctx, 'L', x, y, w, d, 4.5, 0.02, 0.1, 0, 16, S.color);
+    },
+    mall(ctx, gx, gy, v, S, t, face) {
+      const x = gx + 0.08, y = gy + 0.14, w = 0.84, d = 0.64;
+      box(ctx, x, y, w, d, 2, 15, '#d9d2c2');
+      ['L', 'R'].forEach((s) => wallRect(ctx, s, x, y, w, d, 2, 0.05, 0.95, 2, 11, s === 'L' ? C.lit : shade(C.lit, -0.18)));
+      for (let c = 1; c < 7; c++) wallRect(ctx, 'L', x, y, w, d, 2, c / 7 - 0.012, c / 7 + 0.012, 2, 11, '#d9d2c2');
+      box(ctx, x - 0.02, y - 0.02, w + 0.04, d + 0.04, 17, 1.5, '#aeb5bd');
+      vault(ctx, x + 0.1, y + 0.18, w - 0.2, d - 0.36, 18.5, 9, '#8fc7dd', 5);
+      box(ctx, x + 0.28, y + d, 0.28, 0.04, 12, 7, S.color); wallText(ctx, 'L', x + 0.31, y + d + 0.04, 13.5, 'GALLERIA', 5.5, C.white);
+    },
+    townhouses(ctx, gx, gy, v) {
+      const cols = ['#e9dcc0', '#9aa7b4', '#c98f6a', '#dfe5ea'];
+      [0, 1, 2].forEach((i) => {
+        const x = gx + 0.1 + i * 0.27, y = gy + 0.24, w = 0.25, d = 0.48, h = 22 + ((i + v) % 2) * 4;
+        box(ctx, x, y, w, d, 2, h, cols[(i + v) % 4], { top: '#3d4957' });
+        for (let r = 0; r < 3; r++) wallRect(ctx, 'L', x, y, w, d, 2, 0.16, 0.84, 9 + r * 6.5 - (r === 0 ? 5 : 0), 13.5 + r * 6.5, r === 0 ? '#3d2a22' : hash(i + v, r) < 0.75 ? C.lit : C.dim);
+        if (i === 2) for (let c = 0; c < 2; c++) for (let r = 0; r < 2; r++) wallRect(ctx, 'R', x, y, w, d, 2, 0.14 + c * 0.44, 0.42 + c * 0.44, 8 + r * 7, 13 + r * 7, shade(C.lit, -0.18));
+      });
+      tree(ctx, gx + 0.2, gy + 0.88, 0.45); tree(ctx, gx + 0.8, gy + 0.88, 0.45);
+    },
+  });
+  // What stands on each scenery lot at each town tier. [row, col, [village, small town, town, city, metropolis], variant]
   const TOWN_PLAN = [
-    [0, 0, 'office', 0], [0, 1, 'apartments', 0], [0, 2, 'library', 0], [0, 3, 'office', 1], [0, 4, 'cityhall', 0], [0, 5, 'office', 2], [0, 6, 'diner', 0], [0, 7, 'apartments', 1], [0, 8, 'park', 0],
-    [1, 0, 'office', 3], [2, 0, 'firehouse', 0], [3, 0, 'apartments', 2], [4, 0, 'school', 0], [5, 0, 'office', 5], [6, 0, 'cafe', 0], [7, 0, 'houses', 0], [8, 0, 'park', 1],
-    [8, 1, 'houses', 1], [8, 2, 'park', 2], [8, 3, 'diner', 1], [8, 4, 'houses', 2], [8, 5, 'market', 0], [8, 6, 'cafe', 1], [8, 7, 'houses', 3], [8, 8, 'park', 3],
-    [1, 8, 'cafe', 2], [2, 8, 'houses', 5], [3, 8, 'park', 6], [4, 8, 'market', 1], [5, 8, 'houses', 6], [6, 8, 'diner', 2], [7, 8, 'park', 5],
+    [0, 0, ['woods', 'houses', 'office', 'office', 'skyscraper'], 0], [0, 1, ['field', 'houses', 'apartments', 'apartments', 'skyscraper'], 1],
+    [0, 2, ['barn', 'store', 'library', 'library', 'museum'], 0], [0, 3, ['field', 'houses', 'office', 'skyscraper', 'skyscraper'], 2],
+    [0, 4, ['store', 'cityhall', 'cityhall', 'cityhall', 'cityhall'], 0], [0, 5, ['field', 'houses', 'office', 'office', 'skyscraper'], 3],
+    [0, 6, ['woods', 'diner', 'diner', 'office', 'skyscraper'], 4], [0, 7, ['field', 'houses', 'apartments', 'apartments', 'condo'], 1], [0, 8, ['woods', 'park', 'park', 'park', 'park'], 0],
+    [1, 0, ['field', 'houses', 'office', 'skyscraper', 'skyscraper'], 5], [2, 0, ['woods', 'firehouse', 'firehouse', 'firehouse', 'firehouse'], 0],
+    [3, 0, ['barn', 'houses', 'apartments', 'apartments', 'condo'], 2], [4, 0, ['field', 'school', 'school', 'school', 'museum'], 4],
+    [5, 0, ['woods', 'houses', 'office', 'office', 'skyscraper'], 6], [6, 0, ['houses', 'cafe', 'cafe', 'cafe', 'mall'], 0],
+    [7, 0, ['field', 'houses', 'houses', 'apartments', 'condo'], 0], [8, 0, ['woods', 'woods', 'park', 'park', 'park'], 1],
+    [8, 1, ['field', 'houses', 'houses', 'houses', 'townhouses'], 1], [8, 2, ['woods', 'park', 'park', 'park', 'park'], 2],
+    [8, 3, ['houses', 'diner', 'diner', 'diner', 'mall'], 1], [8, 4, ['field', 'houses', 'houses', 'townhouses', 'townhouses'], 2],
+    [8, 5, ['woods', 'market', 'market', 'market', 'market'], 0], [8, 6, ['houses', 'houses', 'cafe', 'cafe', 'cafe'], 1],
+    [8, 7, ['field', 'houses', 'houses', 'houses', 'townhouses'], 3], [8, 8, ['woods', 'woods', 'park', 'park', 'park'], 3],
+    [1, 8, ['field', 'houses', 'cafe', 'cafe', 'mall'], 2], [2, 8, ['houses', 'houses', 'houses', 'townhouses', 'townhouses'], 5],
+    [3, 8, ['woods', 'park', 'park', 'park', 'park'], 6], [4, 8, ['field', 'market', 'market', 'market', 'market'], 1],
+    [5, 8, ['houses', 'houses', 'houses', 'houses', 'townhouses'], 6], [6, 8, ['woods', 'diner', 'diner', 'diner', 'diner'], 2], [7, 8, ['field', 'woods', 'park', 'park', 'park'], 5],
   ].sort((a, b) => a[0] + a[1] - b[0] - b[1]);
+  const GREEN = { park: 1, houses: 1, woods: 1, barn: 1, field: 1, townhouses: 1 };
+  // how busy the streets are at each tier: [cars, walkers, lamps per side]
+  const BUSY = [[2, 8, 0], [4, 20, 2], [9, 44, 5], [12, 60, 7], [15, 78, 8]];
 
   R.drawTown = function (ctx, back) {
-    TOWN_PLAN.forEach(([i, j, kind, v]) => {
+    const tier = this.state.stadium;
+    TOWN_PLAN.forEach(([i, j, kinds, v]) => {
       if ((i === 0 || j === 0) !== back) return;
-      const gx = j - 2, gy = i - 2, green = kind === 'park' || kind === 'houses';
+      const kind = kinds[tier - 1], gx = j - 2, gy = i - 2, green = GREEN[kind];
       box(ctx, gx + 0.04, gy + 0.04, 0.92, 0.92, 0, 2, green ? '#4a8a62' : C.walk, green ? { top: '#4a8a62', left: '#3a7350', right: '#2c5a40' } : null);
-      TOWN[kind](ctx, gx, gy, v, this.state, this.t, i === 0 || i === 8 ? 'L' : 'R');
+      TOWN[kind](ctx, gx, gy, v, this.state, this.t, i === 0 || i === 8 ? 'L' : 'R', tier);
     });
   };
 
@@ -1998,14 +2097,14 @@ tr.me td:first-child { box-shadow: inset 3px 0 0 var(--team); }
     poly(ctx, [Cc, B, [B[0], B[1] + 5], [Cc[0], Cc[1] + 5]], '#28543c');
     poly(ctx, [A, B, Cc, D], C.grass);
     const sq = (a, b, fill, stroke) => poly(ctx, [P(a, a), P(b, a), P(b, b), P(a, b)], fill, stroke);
+    const tier = this.state.stadium;         // the town grows up with the stadium
     sq(-2.04, G + 2.04, '#39745a');          // town blocks sit on slightly darker turf
-    sq(-1.0, G + 1.0, C.walk);               // outer sidewalk
-    sq(-0.84, G + 0.84, C.asphalt);          // ring road
+    sq(-1.0, G + 1.0, tier === 1 ? '#6f9a62' : tier >= 4 ? '#c9c4b8' : C.walk);   // verge, then sidewalk, then paving
+    sq(-0.84, G + 0.84, tier === 1 ? '#9a8562' : C.asphalt);                      // dirt road, then asphalt
     sq(-0.2, G + 0.2, C.walk);               // district sidewalk
     sq(-0.07, G + 0.07, '#262d38');          // district streets
-    ctx.save(); ctx.setLineDash([7, 7]); ctx.globalAlpha = 0.7;
-    sq(-0.52, G + 0.52, null, C.line);
-    ctx.restore();
+    if (tier >= 2) { ctx.save(); ctx.setLineDash([7, 7]); ctx.globalAlpha = 0.7; sq(-0.52, G + 0.52, null, tier >= 4 ? '#e9edf2' : C.line); ctx.restore(); }
+    if (tier < 3) return; // crosswalks arrive with the town
     // crosswalks at the middle of each side
     const zebra = 'rgba(238,241,244,.8)';
     for (let k = 0; k < 5; k++) {
@@ -2036,16 +2135,17 @@ tr.me td:first-child { box-shadow: inset 3px 0 0 var(--team); }
     this.drawGround(ctx);
     // moving things, each tagged with the layer it belongs to
     const cars = [], palette = ['#e4572e', '#f2b33d', '#e8e2d0', '#4f8fd9', '#3aa88f', '#b06ab3'];
-    for (let i = 0; i < 9; i++) cars.push(Object.assign(loopPos((i * 0.447 + t * (0.004 + (i % 3) * 0.0012)) % 4, -0.52), { col: palette[i % palette.length] }));
+    const busy = BUSY[S.stadium - 1];
+    for (let i = 0; i < busy[0]; i++) cars.push(Object.assign(loopPos((i * 0.447 + t * (0.004 + (i % 3) * 0.0012)) % 4, -0.52), { col: palette[i % palette.length] }));
     const walkers = [];
-    for (let i = 0; i < 44; i++) {
+    for (let i = 0; i < busy[1]; i++) {
       const outer = i % 3 !== 0, dir = i % 2 ? 1 : -1, sp = 0.0009 + hash(i, 7) * 0.0009;
       const u = (((hash(i, 3) * 4 + dir * t * sp) % 4) + 4) % 4;
       const lane = outer ? -0.92 + (i % 4) * 0.02 - 0.03 : -0.135 + (i % 2) * 0.03;
       walkers.push(Object.assign(loopPos(u, lane), { i, outer }));
     }
     const lamps = [];
-    for (let s = 0; s < 4; s++) for (let k = 0; k < 5; k++) lamps.push(loopPos(s + (k + 0.5) / 5, -0.97));
+    for (let s = 0; s < 4; s++) for (let k = 0; k < busy[2]; k++) lamps.push(loopPos(s + (k + 0.5) / busy[2], -0.97));
     const rim = [];
     for (let i = 0; i < 40; i++) {
       const side = i % 4, f = hash(i, 9) * (G + 2 * E - 0.3) - E + 0.15, off = E - 0.11;
@@ -2111,6 +2211,13 @@ tr.me td:first-child { box-shadow: inset 3px 0 0 var(--team); }
 
   /** Draw one building (or the stadium, type 'stadium') on its own canvas. Used by the gallery page. */
   FT.drawPreview = function (canvas, type, level, color, night) {
+    if (type === 'town') {
+      const r = canvas.townRenderer || (canvas.townRenderer = new Renderer(canvas));
+      canvas.toneHooked = true;
+      r.state = { color, stadium: level, grid: {} }; r.night = !!night; r.fill = 0.85; r.t = 67; r.score = '27-24';
+      r.resize(); r.zoom = 1.12; r.applyView(); r.draw();
+      return;
+    }
     const dpr = Math.min(2, root.devicePixelRatio || 1), w = canvas.clientWidth || 220, h = canvas.clientHeight || 180;
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
     const ctx = canvas.getContext('2d');
