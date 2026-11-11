@@ -54,22 +54,6 @@
     cream: '#efe6d2', brick: '#a65f48', white: '#eef1f4', steel: '#6d7887', red: '#e5484d', wood: '#8a6240',
   };
 
-  // ---- pixel look (a preview filter, not redrawn art) ------------------------------------
-  // The scene is drawn small, then every pixel is snapped to a short colour ramp with ordered dithering and
-  // hard-edged transparency, and the browser scales it up without smoothing.
-  const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
-  function pixelize(ctx, w, h) {
-    const im = ctx.getImageData(0, 0, w, h), d = im.data;
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      const i = (y * w + x) * 4;
-      if (d[i + 3] < 110) { d[i + 3] = 0; continue; }
-      d[i + 3] = 255;
-      const o = (BAYER[(y & 3) * 4 + (x & 3)] - 7.5) * 1.5;
-      for (let k = 0; k < 3; k++) { const v = Math.round((d[i + k] + o) / 24) * 24; d[i + k] = v < 0 ? 0 : v > 255 ? 255 : v; }
-    }
-    ctx.putImageData(im, 0, 0);
-  }
-
   function Renderer(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
@@ -87,8 +71,7 @@
   const R = Renderer.prototype;
 
   R.resize = function () {
-    const c = this.canvas, dpr = this.pixel ? 1 / this.pixel : Math.min(2, root.devicePixelRatio || 1);
-    c.style.imageRendering = this.pixel ? 'pixelated' : '';
+    const c = this.canvas, dpr = Math.min(2, root.devicePixelRatio || 1);
     const w = c.clientWidth || 800, h = c.clientHeight || 560;
     c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
     this.w = w; this.h = h; this.dpr = dpr;
@@ -1237,7 +1220,6 @@
       ctx.globalAlpha = Math.max(0, p.life / 40); ctx.fillStyle = p.col; ctx.fillRect(p.x - 1.2, p.y - 1.2, 2.4, 2.4);
     });
     ctx.restore();
-    if (this.pixel) pixelize(ctx, this.canvas.width, this.canvas.height);
   };
 
   R.fireworks = function (n) {
@@ -1255,9 +1237,9 @@
     let last = 0;
     const loop = (now) => {
       this.raf = root.requestAnimationFrame(loop);
-      if (now - last < (still ? 400 : this.pixel ? 110 : 40)) return; // the pixel look steps like sprite animation
+      if (now - last < (still ? 400 : 40)) return;
       last = now;
-      if (!still) this.t += this.pixel ? 3 : 1;
+      if (!still) this.t += 1;
       this.draw();
     };
     this.raf = root.requestAnimationFrame(loop);
@@ -1270,11 +1252,10 @@
       const r = canvas.townRenderer || (canvas.townRenderer = new Renderer(canvas));
       canvas.toneHooked = true;
       r.state = { color, color2: look.color2, setting: look.setting, stadium: level, grid: {} }; r.night = !!night; r.fill = 0.85; r.t = 67; r.score = '27-24';
-      r.pixel = look.pixel || 0; r.resize(); r.zoom = 1.12; r.applyView(); r.draw();
+      r.resize(); r.zoom = 1.12; r.applyView(); r.draw();
       return;
     }
-    const dpr = look.pixel ? 1 / look.pixel : Math.min(2, root.devicePixelRatio || 1), w = canvas.clientWidth || 220, h = canvas.clientHeight || 180;
-    canvas.style.imageRendering = look.pixel ? 'pixelated' : '';
+    const dpr = Math.min(2, root.devicePixelRatio || 1), w = canvas.clientWidth || 220, h = canvas.clientHeight || 180;
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
     const ctx = canvas.getContext('2d');
     if (!canvas.toneHooked) { hookTone(ctx); canvas.toneHooked = true; }
@@ -1294,7 +1275,6 @@
       DRAW[type](ctx, 0, 0, level, S, fake.t, fake);
     }
     FLOOD = false;
-    if (look.pixel) pixelize(ctx, canvas.width, canvas.height);
   };
 
   FT.Renderer = Renderer;

@@ -99,8 +99,6 @@ main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1
 .zoom { position: absolute; left: max(12px, env(safe-area-inset-left, 0px)); bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
 .zoom button { width: 38px; height: 34px; background: rgba(22, 31, 45, .85); border: 1px solid var(--line); border-radius: 6px; font: 600 17px var(--display); }
 .zoom button:hover { border-color: var(--muted); }
-.zoom #btn-pixel, .zoom #btn-zoomreset { width: auto; padding: 0 9px; font-size: 14px; text-transform: uppercase; letter-spacing: .06em; }
-.zoom #btn-pixel.on { background: var(--team); border-color: transparent; color: #fff; }
 .side { display: flex; flex-direction: column; min-height: 0; background: var(--panel); border-left: 1px solid var(--line); }
 .tabs { display: flex; border-bottom: 1px solid var(--line); }
 .tabs button { flex: 1; min-width: 0; background: none; border: 0; border-bottom: 3px solid transparent; padding: 12px 2px 9px; font-size: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; color: var(--muted); }
