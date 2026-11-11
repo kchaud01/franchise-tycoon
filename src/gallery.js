@@ -7,7 +7,7 @@
   const money = (n) => '$' + (n >= 1e6 ? (n / 1e6).toFixed(n % 1e6 ? 2 : 0) + 'M' : Math.round(n / 1e3) + 'k');
   const card = (type, lv, title, lines, wide) => '<div class="lv' + (wide ? ' wide' : '') + '"><canvas data-type="' + type + '" data-lv="' + lv + '" role="img" aria-label="' + title + '"></canvas><div><b>' + title + '</b>' + lines.map((l, i) => (i ? '<span>' : '<em>') + l + (i ? '</span>' : '</em>')).join('') + '</div></div>';
 
-  let h = '<section><h2>Stadium</h2><p>The centre of the district. Each expansion adds seats, and from level 2 up, floodlight towers and then a canopy over the far stands.</p><div class="levels">';
+  let h = '<section><h2>Stadium</h2><p>The centre of the district. It grows from a grass-banked community field into a concrete bowl, a double-deck stadium with a canopy, a roofed arena behind glass, and finally a fully enclosed dome.</p><div class="levels">';
   FT.STADIUM.name.forEach((name, i) => { h += card('stadium', i + 1, 'Level ' + (i + 1) + ' · ' + name, [i ? money(FT.STADIUM.cost[i]) + ' to expand' : 'Where you start', FT.STADIUM.cap[i].toLocaleString() + ' seats'], true); });
   h += '</div></section>';
   FT.TYPES.forEach((t) => {

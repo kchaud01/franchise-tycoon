@@ -73,7 +73,7 @@
   const STADIUM = {
     cap: [18e3, 28e3, 40e3, 55e3, 72e3],
     cost: [0, 1.2e6, 3e6, 7e6, 15e6],
-    name: ['Municipal Field', 'County Stadium', 'Metro Arena', 'Grand Coliseum', 'The Cathedral'],
+    name: ['Community Field', 'County Bowl', 'Metro Stadium', 'Grand Arena', 'Skyline Dome'],
   };
   const PRICES = [
     { id: 0, name: 'Value', price: 12, turnout: 1.15, hype: 1 },

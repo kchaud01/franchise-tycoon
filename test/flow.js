@@ -21,7 +21,7 @@ const assert = require('assert');
   assert((await page.textContent('#panel')).includes('+20% bonus active'), 'stadium adjacency shown');
   await lot(4, 2); await page.click('[data-act="build"][data-v="retail"]');
   await lot(2, 2);
-  assert((await page.textContent('#panel')).includes('Municipal Field'), 'stadium selectable');
+  assert((await page.textContent('#panel')).includes('Community Field'), 'stadium selectable');
   await page.click('#tab-game');
   assert((await page.textContent('#panel')).includes('Home game'), 'week 1 is a home game');
   await page.click('[data-act="price"][data-v="0"]');
