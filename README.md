@@ -50,7 +50,7 @@ gcloud storage buckets add-iam-policy-binding gs://PROJECT-franchise-tycoon --me
 gcloud run deploy franchise-tycoon --source . --region us-central1 --allow-unauthenticated --max-instances 1 --execution-environment gen2 --set-env-vars CREATE_KEY=your-secret,DATA_FILE=/data/leagues.json --add-volume name=data,type=cloud-storage,bucket=PROJECT-franchise-tycoon --add-volume-mount volume=data,mount-path=/data
 ```
 
-To ship an update, run the last command again.
+To ship an update, run the last command again, or turn on continuous deployment (Cloud Run → your service → Set up continuous deployment → GitHub, branch `^main$`, build type Dockerfile) so every push to `main` deploys itself. Settings, the server key and the data bucket carry over between deploys.
 
 ### Lost your commissioner link?
 
