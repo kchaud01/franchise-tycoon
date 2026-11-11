@@ -1,0 +1,1660 @@
+<title>Franchise Tycoon Gallery</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+/* Layout: one screen. A dusk-lit district fills the left; a scoreboard-styled control panel sits on the right (below it on phones). */
+:root {
+  color-scheme: dark;
+  --ink: #0f1622;
+  --panel: #161f2d;
+  --raise: #1e2a3b;
+  --line: #2c3b50;
+  --text: #efe8d8;
+  --muted: #93a2b5;
+  --gold: #ffd685;
+  --good: #63d391;
+  --bad: #ff8271;
+  --team: #e4572e;
+  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "Barlow", "Segoe UI", system-ui, sans-serif;
+}
+html, body { height: 100%; }
+body { background: var(--ink); color: var(--text); font: 15px/1.45 var(--body); }
+* { box-sizing: border-box; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: .45; }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+h1, h2, h3, .kicker, .btn, .tabs button, .stat b, th { font-family: var(--display); }
+h1, h2, h3 { margin: 0; text-wrap: balance; line-height: 1.05; }
+p { margin: 0; }
+.good { color: var(--good); } .bad { color: var(--bad); }
+.kicker { text-transform: uppercase; letter-spacing: .14em; font-size: 13px; font-weight: 600; color: var(--gold); }
+.fine { color: var(--muted); font-size: 13px; }
+.app { height: 100%; display: flex; flex-direction: column; }
+
+/* buttons */
+.btn { border: 1px solid var(--line); background: var(--raise); border-radius: 6px; padding: 9px 16px; font-size: 17px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.btn:hover:not(:disabled) { border-color: var(--muted); }
+.btn.primary { background: var(--team); border-color: transparent; color: #fff; text-shadow: 0 1px 0 rgba(0,0,0,.35); }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.1); }
+.btn.ghost { background: transparent; }
+.btn.small { font-size: 14px; padding: 6px 11px; }
+.btn.wide, .btn.big { width: 100%; }
+.btn.big { font-size: 21px; padding: 13px 16px; }
+
+/* setup */
+.setup { flex: 1; display: grid; place-items: center; padding-block: 24px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: linear-gradient(180deg, #131b33 0%, #2a2e57 48%, #6a4a6c 78%, #c58560 100%); overflow: auto; }
+.setup-card { width: min(100%, 480px); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 28px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 24px 60px rgba(0,0,0,.45); }
+.setup-card h1 { font-size: clamp(44px, 11vw, 64px); font-weight: 700; text-transform: uppercase; letter-spacing: .01em; }
+.setup-body { display: flex; flex-direction: column; gap: 12px; margin-top: 6px; }
+.lede { color: #cfd6df; }
+label { font-family: var(--display); text-transform: uppercase; letter-spacing: .1em; font-size: 13px; color: var(--muted); }
+.connect { display: flex; flex-direction: column; gap: 6px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.row.end { justify-content: flex-end; margin-top: 6px; }
+input, select { background: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; min-width: 0; flex: 1; width: 100%; }
+.error { color: var(--bad); }
+.or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; }
+.or::before, .or::after { content: ""; height: 1px; flex: 1; background: var(--line); }
+.pick { display: flex; flex-direction: column; gap: 6px; }
+.pickrow { text-align: left; background: var(--raise); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; }
+.pickrow:hover { border-color: var(--gold); }
+.pickrow span { color: var(--muted); font-size: 13px; }
+.swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.swatch { width: 34px; height: 34px; border-radius: 50%; border: 2px solid transparent; }
+.swatch.on { border-color: #fff; box-shadow: 0 0 0 2px var(--ink) inset; }
+
+/* game shell */
+.game { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.hud { display: flex; align-items: center; gap: 18px; padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.brand { display: flex; flex-direction: column; min-width: 0; border-left: 4px solid var(--team); padding-left: 10px; }
+.brand b { font: 700 22px/1 var(--display); text-transform: uppercase; letter-spacing: .02em; overflow-wrap: anywhere; }
+.brand span { color: var(--muted); font-size: 12px; }
+.stats { display: flex; gap: 22px; flex: 1; flex-wrap: wrap; justify-content: flex-end; }
+.stat { display: flex; flex-direction: column; min-width: 56px; }
+.stat span { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.stat b { font-size: 22px; line-height: 1.1; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat.bad b { color: var(--bad); }
+.meter { display: block; height: 5px; background: var(--ink); border-radius: 3px; overflow: hidden; }
+.meter > i { display: block; height: 100%; background: linear-gradient(90deg, var(--team), var(--gold)); border-radius: 3px; }
+.stat .meter { width: 64px; }
+.hud-actions { display: flex; gap: 6px; position: relative; }
+.menu { position: absolute; right: 0; top: calc(100% + 6px); background: var(--raise); border: 1px solid var(--line); border-radius: 6px; display: flex; flex-direction: column; min-width: 210px; z-index: 5; box-shadow: 0 12px 30px rgba(0,0,0,.5); }
+.menu button { background: none; border: 0; text-align: left; padding: 10px 14px; }
+.menu button:hover { background: var(--line); }
+
+main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 400px; }
+.board { position: relative; min-height: 0; background:
+  radial-gradient(1px 1px at 12% 14%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 31% 8%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 58% 11%, #fff 50%, transparent 51%),
+  radial-gradient(1px 1px at 77% 6%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 90% 19%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 45% 21%, #fff 50%, transparent 51%),
+  radial-gradient(1px 1px at 6% 30%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 69% 26%, #fff 50%, transparent 51%),
+  linear-gradient(180deg, #111830 0%, #262b55 42%, #5e466c 72%, #c58560 100%); }
+.board.day { background: linear-gradient(180deg, #4f97d1 0%, #8fc4e8 55%, #d9e6dc 100%); }
+#city { width: 100%; height: 100%; display: block; touch-action: manipulation; }
+.visit { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 24px); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; background: rgba(22, 31, 45, .92); border: 1px solid var(--line); border-top: 3px solid var(--gold); border-radius: 8px; padding: 8px 10px; }
+.visit div { display: flex; flex-direction: column; min-width: 0; padding: 0 6px; }
+.visit span { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--gold); }
+.visit b { font: 700 20px/1.1 var(--display); text-transform: uppercase; overflow-wrap: anywhere; }
+.visit em { font-style: normal; font-size: 12.5px; color: var(--muted); }
+.linkbtn { background: none; border: 0; padding: 0; text-align: left; text-decoration: underline; text-decoration-color: var(--muted); text-underline-offset: 3px; }
+.linkbtn:hover { color: var(--gold); }
+.zoom { position: absolute; left: max(12px, env(safe-area-inset-left, 0px)); bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
+.zoom button { width: 38px; height: 34px; background: rgba(22, 31, 45, .85); border: 1px solid var(--line); border-radius: 6px; font: 600 17px var(--display); }
+.zoom button:hover { border-color: var(--muted); }
+.side { display: flex; flex-direction: column; min-height: 0; background: var(--panel); border-left: 1px solid var(--line); }
+.tabs { display: flex; border-bottom: 1px solid var(--line); }
+.tabs button { flex: 1; min-width: 0; background: none; border: 0; border-bottom: 3px solid transparent; padding: 12px 2px 9px; font-size: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; color: var(--muted); }
+.tabs button.on { color: var(--text); border-bottom-color: var(--team); }
+.panel { flex: 1; min-height: 0; overflow: auto; padding: 14px 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+
+.card { background: var(--raise); border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+.card h2 { font-size: 30px; font-weight: 700; text-transform: uppercase; overflow-wrap: anywhere; }
+.card h2 small { font-size: 16px; color: var(--muted); font-weight: 600; letter-spacing: .06em; }
+.card h3 { font-size: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+.card.match { border-top: 3px solid var(--team); }
+.pill { align-self: flex-start; background: var(--ink); border: 1px solid var(--line); border-radius: 99px; padding: 3px 11px; font-size: 13px; color: var(--gold); }
+.linkline { color: var(--gold); font-size: 14px; }
+.notice { text-align: center; }
+
+.bars { display: flex; flex-direction: column; gap: 6px; }
+.bar { display: grid; grid-template-columns: 104px 1fr 62px; gap: 8px; align-items: center; font-size: 13px; }
+.bar span { color: var(--muted); }
+.bar > i { height: 8px; background: var(--ink); border-radius: 4px; overflow: hidden; }
+.bar > i > i { display: block; height: 100%; background: var(--gold); border-radius: 4px; }
+.bar b { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
+
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.seg button, .promos button, .options button { background: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; text-align: left; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.seg button b, .promos button b, .options button b { font: 600 17px/1.15 var(--display); text-transform: uppercase; letter-spacing: .03em; }
+.seg button span, .promos button span, .options button span { font-size: 12.5px; color: var(--muted); }
+.seg button.on, .promos button.on { border-color: var(--team); box-shadow: inset 0 0 0 1px var(--team); }
+.seg button:hover:not(:disabled), .promos button:hover:not(:disabled), .options button:hover:not(:disabled) { border-color: var(--muted); }
+.promos, .options { display: flex; flex-direction: column; gap: 6px; }
+.promos button, .options button { display: grid; grid-template-columns: 1fr auto; column-gap: 10px; }
+.promos button span, .options button span { grid-column: 1 / -1; }
+.promos em, .options em, .catalog em { font: 600 15px var(--display); font-style: normal; color: var(--gold); }
+.options .syn.good, dd.good { color: var(--good); }
+
+.live { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.live div { background: var(--ink); border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; min-width: 0; }
+.live span { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.live b { font: 700 28px/1.1 var(--display); color: var(--gold); font-variant-numeric: tabular-nums; }
+
+.catalog { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.catalog li { display: grid; grid-template-columns: 1fr auto; column-gap: 8px; }
+.catalog b { font: 600 16px var(--display); text-transform: uppercase; letter-spacing: .03em; }
+.catalog span { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
+.facts { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.facts div { display: grid; grid-template-columns: 84px 1fr; gap: 8px; font-size: 14px; }
+.facts dt { color: var(--muted); } .facts dd { margin: 0; }
+
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 600; padding: 4px 6px; }
+td { padding: 6px; border-top: 1px solid var(--line); }
+th:nth-child(n+3), td:nth-child(n+3) { text-align: right; white-space: nowrap; }
+tr.me td { color: var(--gold); font-weight: 600; }
+tr.me td:first-child { box-shadow: inset 3px 0 0 var(--team); }
+
+.histrow { display: grid; grid-template-columns: 46px auto 1fr auto; gap: 8px; align-items: baseline; background: none; border: 0; border-top: 1px solid var(--line); padding: 7px 2px; text-align: left; font-size: 14px; }
+.histrow:hover { background: var(--ink); }
+.histrow span { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.histrow b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.histrow em { font: 600 16px var(--display); font-style: normal; }
+.badges { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.badges li { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 14px; }
+.badges li b { font-weight: 500; }
+.badges li.got { color: var(--gold); }
+.badges li.got b::before { content: "✓ "; }
+
+/* league mode */
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.slider { display: flex; align-items: center; gap: 12px; }
+.slider input { flex: 1; padding: 0; accent-color: var(--team); background: none; border: 0; }
+.slider output { font: 700 30px/1 var(--display); color: var(--gold); min-width: 62px; text-align: right; font-variant-numeric: tabular-nums; }
+.check { display: flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font: 14px var(--body); color: var(--text); }
+.check input { width: auto; flex: none; accent-color: var(--team); }
+.weeknav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.weeknav h3 { text-align: center; }
+.invites { display: flex; flex-direction: column; gap: 8px; }
+.invite { display: flex; flex-direction: column; gap: 3px; }
+.invite .row { flex-wrap: nowrap; }
+.invite input { font-size: 12px; padding: 6px 8px; }
+.adj { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; border-top: 1px solid var(--line); padding-top: 8px; }
+.adj div { display: flex; flex-direction: column; min-width: 0; }
+.adj span { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+.adj b { font: 700 22px/1.1 var(--display); font-variant-numeric: tabular-nums; }
+.adj em { font-style: normal; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.adj p { grid-column: 1 / -1; color: var(--gold); font-size: 13px; }
+.adj.flip b { color: var(--gold); }
+
+/* game-day report */
+.modal { position: fixed; inset: 0; background: rgba(8, 12, 20, .72); display: grid; place-items: center; z-index: 20; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.modal-body { width: min(100%, 560px); max-height: 100%; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-top: 4px solid var(--team); border-radius: 10px; padding: 22px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+.final { font-size: clamp(40px, 10vw, 58px); font-weight: 700; text-transform: uppercase; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+.final span { color: var(--text); font-variant-numeric: tabular-nums; }
+.vs { color: var(--muted); margin-top: -8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips span { background: var(--raise); border: 1px solid var(--line); border-radius: 99px; padding: 3px 10px; font-size: 13px; }
+.gate { display: flex; flex-direction: column; gap: 5px; }
+.gatehead { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 14px; }
+.gatehead span { color: var(--muted); }
+.gate .meter { height: 9px; }
+.stamp { font: 700 13px var(--display); font-style: normal; text-transform: uppercase; letter-spacing: .12em; color: var(--ink); background: var(--gold); border-radius: 3px; padding: 1px 6px; margin-left: 4px; }
+.lines td { vertical-align: top; }
+.lines td:first-child { text-align: left; white-space: normal; }
+.lines td:last-child { text-align: right; white-space: nowrap; font: 600 18px var(--display); }
+.lines td span { display: block; color: var(--muted); font-size: 12.5px; }
+.lines tfoot td { border-top: 2px solid var(--muted); font-size: 16px; }
+.lines tfoot td:last-child { font-size: 24px; }
+.deltas { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.deltas > div { background: var(--raise); border-radius: 8px; padding: 10px 12px; min-width: 0; }
+.deltas span { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.deltas b { display: block; font: 700 26px/1.1 var(--display); }
+.deltas ul { list-style: none; margin: 6px 0 0; padding: 0; font-size: 13px; color: #cfd6df; }
+.deltas em { font-style: normal; font-variant-numeric: tabular-nums; display: inline-block; min-width: 38px; }
+.won { background: rgba(255, 214, 133, .1); border: 1px solid var(--gold); border-radius: 8px; padding: 9px 12px; color: var(--gold); }
+.won em { font-style: normal; font-weight: 600; }
+
+@media (max-width: 900px) {
+  html, body { height: auto; }
+  .app { min-height: 100%; }
+  main { display: flex; flex-direction: column; }
+  .board { height: min(72vw, 520px); flex: none; }
+  .side { border-left: 0; border-top: 1px solid var(--line); }
+  .panel { overflow: visible; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .stats { justify-content: flex-start; gap: 14px 18px; order: 3; flex-basis: 100%; }
+  .hud { gap: 10px; }
+  .hud-actions { margin-left: auto; }
+  .stat b { font-size: 19px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .modal-body { animation: rise .28s ease-out; }
+  @keyframes rise { from { transform: translateY(14px); opacity: .6; } to { transform: none; opacity: 1; } }
+}
+
+html, body { height: auto; }
+.gal { max-width: 1120px; margin: 0 auto; padding-block: 28px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 30px; }
+.gal header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px; }
+.gal h1 { font-size: clamp(38px, 8vw, 58px); font-weight: 700; text-transform: uppercase; }
+.gal header p { color: var(--muted); max-width: 60ch; }
+.controls { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+.toggle { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.toggle button { background: none; border: 0; padding: 7px 14px; font: 600 15px var(--display); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.toggle button.on { background: var(--team); color: #fff; }
+.gal section { display: flex; flex-direction: column; gap: 10px; }
+.gal section > h2 { font-size: 28px; font-weight: 700; text-transform: uppercase; border-left: 4px solid var(--team); padding-left: 10px; }
+.gal section > p { color: var(--muted); max-width: 75ch; }
+.gal section > p.linkline { color: var(--gold); }
+.levels { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.lv { background: var(--raise); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+.lv canvas { width: 100%; height: 190px; display: block; background: linear-gradient(180deg, #4f97d1 0%, #8fc4e8 60%, #cfe2dc 100%); }
+.night .lv canvas { background: linear-gradient(180deg, #111830 0%, #262b55 55%, #5e466c 100%); }
+.lv.wide canvas { height: 210px; }
+.lv div { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 2px; }
+.lv b { font: 600 18px/1.1 var(--display); text-transform: uppercase; letter-spacing: .03em; }
+.lv span { font-size: 13px; color: var(--muted); }
+.lv em { font: 600 15px var(--display); font-style: normal; color: var(--gold); }
+</style>
+<div class="gal" id="gal">
+  <header>
+    <div>
+      <p class="kicker">Franchise Tycoon</p>
+      <h1>Building gallery</h1>
+      <p>Every building at each of its three levels, and the stadium at all five. These are drawn by the game itself, so this is exactly what appears in your district.</p>
+    </div>
+    <div class="controls">
+      <div class="toggle" role="group" aria-label="Time of day">
+        <button id="t-day" data-night="0">Afternoon</button>
+        <button id="t-night" data-night="1">Night game</button>
+      </div>
+      <div class="swatches" id="colors" role="group" aria-label="Team colour"></div>
+    </div>
+  </header>
+  <div id="sections"></div>
+</div>
+<script>
+/* Franchise Tycoon — game engine. Pure logic, no DOM. Runs in the browser and in Node (tests). */
+(function (root) {
+  'use strict';
+  const FT = (root.FT = root.FT || {});
+
+  const GRID = 5;
+  const STADIUM_TILES = ['1-1', '1-2', '2-1', '2-2'];
+  const key = (r, c) => r + '-' + c;
+  const isStadium = (k) => STADIUM_TILES.indexOf(k) >= 0;
+
+  // ---- Catalog -------------------------------------------------------------
+  // cost[level-1] is the price to reach that level. `v` is the per-level effect value.
+  const BUILDINGS = {
+    concessions: {
+      name: 'Concessions', cost: [180e3, 420e3, 950e3], v: [2.5, 5, 8.5],
+      blurb: 'Food and drink sales per fan in the building on home game days.',
+      link: 'Scales with your fantasy score against the league median that week.',
+      synergy: 'Next to the stadium: +20%',
+      unit: (v) => '$' + v.toFixed(2) + ' per fan',
+    },
+    transit: {
+      name: 'Transit Hub', cost: [220e3, 520e3, 1.2e6], v: [8e3, 18e3, 32e3],
+      blurb: 'Parking and rail. Raises how many fans can physically reach the stadium.',
+      link: 'Matters most when hype is high and the stadium would otherwise sell out the roads.',
+      synergy: 'On the outer edge of the district: +10%',
+      unit: (v) => '+' + Math.round(v / 1e3) + 'k fan access',
+    },
+    retail: {
+      name: 'Team Store', cost: [260e3, 600e3, 1.4e6], v: [0.6, 1.3, 2.2],
+      blurb: 'Merchandise sold to your whole fanbase every week, home or away.',
+      link: 'Each starter who scores 20+ fantasy points adds 30% (jersey sales). Wins add 15%.',
+      synergy: 'Next to a Transit Hub or Fan Plaza: +15% each (max +30%)',
+      unit: (v) => '$' + v.toFixed(2) + ' per fan in the fanbase',
+    },
+    suites: {
+      name: 'VIP Suites', cost: [600e3, 1.4e6, 3.2e6], v: [45e3, 100e3, 190e3],
+      blurb: 'Corporate boxes leased on home game days.',
+      link: 'Lease rates follow your league standing: 150% in 1st place down to 60% in last. Doubled in the playoffs.',
+      synergy: 'Next to the stadium: +25%',
+      unit: (v) => '$' + Math.round(v / 1e3) + 'k base per home game',
+    },
+    media: {
+      name: 'Broadcast Center', cost: [450e3, 1e6, 2.4e6], v: [30e3, 65e3, 120e3],
+      blurb: 'TV and streaming rights paid every week, home or away.',
+      link: 'Close games (decided by under 10) pay +40%. Shootouts pay +30%. Night games pay +25%. Playoff games pay +50%.',
+      synergy: 'Next to the stadium: +20%',
+      unit: (v) => '$' + Math.round(v / 1e3) + 'k base per week',
+    },
+    fanzone: {
+      name: 'Fan Plaza', cost: [240e3, 560e3, 1.3e6], v: [3, 6, 10],
+      blurb: 'Watch parties earn money on away weeks, and good news travels further.',
+      link: 'Boosts every hype gain by 10% per level. Away weeks: a fifth of your fanbase shows up to watch.',
+      synergy: 'Next to Concessions: +15% each (max +30%)',
+      unit: (v) => '$' + v + ' per watch-party fan',
+    },
+    medical: {
+      name: 'Performance Center', cost: [350e3, 800e3, 1.8e6], v: [0.3, 0.55, 0.8],
+      blurb: 'Sports medicine and training. Keeps the fanbase calm when things go wrong.',
+      link: 'Cuts the hype hit from starters who bust (under 4 points) and softens losses by 10% per level.',
+      synergy: 'No placement bonus',
+      unit: (v) => Math.round(v * 100) + '% less bust damage',
+    },
+    scouting: {
+      name: 'Front Office', cost: [300e3, 700e3, 1.6e6], v: [600, 1300, 2200],
+      blurb: 'Scouts and analysts. Turns roster depth into money and grows the fanbase faster.',
+      link: 'Pays for every point your bench scores. Fanbase growth +8% per level.',
+      synergy: 'No placement bonus',
+      unit: (v) => '$' + v + ' per bench point',
+    },
+  };
+  const TYPES = Object.keys(BUILDINGS);
+
+  const STADIUM = {
+    cap: [18e3, 28e3, 40e3, 55e3, 72e3],
+    cost: [0, 1.2e6, 3e6, 7e6, 15e6],
+    name: ['Municipal Field', 'County Stadium', 'Metro Arena', 'Grand Coliseum', 'The Cathedral'],
+  };
+  const PRICES = [
+    { id: 0, name: 'Value', price: 12, turnout: 1.15, hype: 1 },
+    { id: 1, name: 'Standard', price: 20, turnout: 1, hype: 0 },
+    { id: 2, name: 'Premium', price: 30, turnout: 0.8, hype: -1 },
+  ];
+  const PROMOS = {
+    none: { name: 'No promotion', cost: 0, text: 'Save the money.' },
+    giveaway: { name: 'Bobblehead Night', cost: 40e3, text: '+15% turnout at a home game.' },
+    guarantee: { name: 'Guarantee a Win', cost: 0, text: 'Win: +8 hype and +20% merch. Lose: -8 hype.' },
+    shootout: { name: 'Shootout Special', cost: 25e3, text: 'Beat the league median score: concessions and watch parties +50%.' },
+  };
+  const BASE_ACCESS = 14e3;
+  const START_CASH = 700e3;
+  const START_FANS = 20e3;
+  const PAYROLL = 60e3;
+  const SHARE = 110e3;
+  const NIGHT_RATE = 38; // percent of regular-season games played at night
+  const SALT = 281; // chosen so home and away weeks alternate reasonably
+  const UPKEEP_RATE = 0.025;
+  const STAR_PTS = 20;
+  const BUST_PTS = 4;
+
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+  const dim = (vals) => vals.slice().sort((a, b) => b - a).reduce((s, v, i) => s + v / (1 + 0.4 * i), 0);
+
+  // ---- League helpers --------------------------------------------------------
+  function median(nums) {
+    if (!nums.length) return 0;
+    const s = nums.slice().sort((a, b) => a - b);
+    const m = s.length >> 1;
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  }
+  function opponentOf(wk, rid) {
+    const me = wk.teams[rid];
+    if (!me || me.mid == null) return null;
+    for (const id in wk.teams) if (+id !== +rid && wk.teams[id].mid === me.mid) return +id;
+    return null;
+  }
+  /** Regular-season standings through `through` (inclusive). Returns {rid: {w,l,t,pf,rank}}. */
+  function standings(league, through) {
+    const tab = {};
+    league.teams.forEach((t) => (tab[t.rosterId] = { rid: t.rosterId, w: 0, l: 0, t: 0, pf: 0 }));
+    const last = Math.min(through, (league.playoffStart || 99) - 1);
+    for (let w = 1; w <= last; w++) {
+      const wk = league.weeks[w];
+      if (!wk || !wk.complete) continue;
+      for (const id in wk.teams) {
+        const opp = opponentOf(wk, +id);
+        if (opp == null || !tab[id]) continue;
+        const a = wk.teams[id].pts, b = wk.teams[opp].pts;
+        tab[id].pf += a;
+        if (a > b) tab[id].w++; else if (a < b) tab[id].l++; else tab[id].t++;
+      }
+    }
+    const order = Object.values(tab).sort((a, b) => (b.w + b.t / 2) - (a.w + a.t / 2) || b.pf - a.pf || a.rid - b.rid);
+    order.forEach((r, i) => (r.rank = i + 1));
+    return tab;
+  }
+  const teamName = (league, rid) => {
+    const t = league.teams.find((x) => x.rosterId === rid);
+    return t ? t.name : 'Bye';
+  };
+
+  /** Who hosts and whether it is a night game: a coin flip both sides of a matchup agree on. */
+  function slot(week, rid, oppId) {
+    const lo = Math.min(rid, oppId), hi = Math.max(rid, oppId);
+    let x = SALT ^ Math.imul(week, 73856093) ^ Math.imul(lo, 19349663) ^ Math.imul(hi, 83492791);
+    x ^= x >>> 16; x = Math.imul(x, 0x85ebca6b); x ^= x >>> 13; x = Math.imul(x, 0xc2b2ae35); x ^= x >>> 16;
+    let y = Math.imul(x ^ 0x9e3779b9, 0x85ebca6b); y ^= y >>> 15; y = Math.imul(y, 0xc2b2ae35); y ^= y >>> 13;
+    return { home: ((x & 1) === 0) === (rid === lo), night: ((y >>> 0) % 100) < NIGHT_RATE };
+  }
+  /** The fixture for a week, known before any points are scored. Null when the week has no data yet. */
+  function matchup(league, week, rid) {
+    const wk = league.weeks[week], me = wk && wk.teams[rid];
+    if (!me) return null;
+    const oppId = opponentOf(wk, rid);
+    if (oppId == null) return { week, bye: true, oppId: null, oppName: 'Bye', home: false, night: false, playoff: false, pts: me.pts, oppPts: 0 };
+    const sl = slot(week, rid, oppId);
+    return { week, bye: false, oppId, oppName: teamName(league, oppId), home: sl.home, night: !!me.playoff || sl.night, playoff: !!me.playoff, pts: me.pts, oppPts: wk.teams[oppId].pts };
+  }
+  /** League-mode bonus points. Each row compares an owner's weekly net with an auto-pilot twin that had the same
+      fantasy result, so the table rewards decisions and not the fantasy score itself.
+      rows: [{rid, net, twinNet, twinGross}] -> adds edge (percent), beaten, bonus. Ties share the lower bonus.
+      payout: 'all' (sliding scale down to zero for last place), 'half' (top half only) or 'top3'. */
+  function bonusTable(rows, cap, payout) {
+    const out = rows.map((r) => Object.assign({}, r, { edge: Math.round(((r.net - r.twinNet) / Math.max(1, r.twinGross)) * 1000) / 10 }));
+    const n = out.length;
+    out.forEach((r) => {
+      r.beaten = out.filter((o) => o.edge < r.edge).length;
+      // k = how many places are paid: everyone but last, the top half, or the top three
+      const k = Math.max(1, Math.min(n - 1, payout === 'top3' ? 3 : payout === 'half' ? Math.ceil(n / 2) : n - 1));
+      const step = r.beaten - (n - k) + 1;
+      r.bonus = n > 1 && step > 0 ? Math.round((cap * step / k) * 10) / 10 : 0;
+    });
+    return out.sort((a, b) => b.edge - a.edge || a.rid - b.rid);
+  }
+
+  // ---- Trades ---------------------------------------------------------------------------
+  const REPLACEMENT = 8; // a player averaging this many points is easy to replace, so fans do not care
+  /** A player's scoring average over finished weeks before `before`, counting only weeks they scored. */
+  function playerAvg(league, id, before) {
+    let g = 0, t = 0;
+    for (let w = 1; w < before; w++) {
+      const p = league.ppw && league.ppw[w] && league.ppw[w][id];
+      if (p > 0 && league.weeks[w] && league.weeks[w].complete) { g++; t += p; }
+    }
+    return g ? t / g : 0;
+  }
+  /** What a team's trades in `week` did to its star power. Null when it made none.
+      net = points-per-game above replacement gained minus given up. Draft picks are ignored. */
+  function tradeImpact(league, week, rid) {
+    const list = (league.trades && league.trades[week]) || [];
+    const got = [], gave = [];
+    let net = 0;
+    const item = (id) => { const avg = playerAvg(league, id, week); return { id, n: (league.players && league.players[id] && league.players[id].n) || '', avg: Math.round(avg * 10) / 10, v: Math.max(0, avg - REPLACEMENT) }; };
+    list.forEach((tr) => {
+      if (tr.rosters.indexOf(rid) < 0) return;
+      for (const id in tr.adds || {}) if (tr.adds[id] === rid) { const it = item(id); got.push(it); net += it.v; }
+      for (const id in tr.drops || {}) if (tr.drops[id] === rid) { const it = item(id); gave.push(it); net -= it.v; }
+    });
+    if (!got.length && !gave.length) return null;
+    const byAvg = (a, b) => b.avg - a.avg;
+    return { net: Math.round(net * 10) / 10, in: got.sort(byAvg), out: gave.sort(byAvg) };
+  }
+
+  /** Everything the sim needs to know about one team's fantasy week. */
+  function weekResult(league, week, rid) {
+    const wk = league.weeks[week];
+    if (!wk || !wk.complete) return null;
+    const me = wk.teams[rid];
+    if (!me) return null;
+    const oppId = opponentOf(wk, rid);
+    const n = league.teams.length;
+    const st = standings(league, week)[rid] || { rank: n, w: 0, l: 0, t: 0 };
+    const scores = Object.values(wk.teams).map((t) => t.pts).filter((p) => p > 0);
+    const res = {
+      season: league.season, week, rid, bye: oppId == null, playoff: !!me.playoff,
+      pts: me.pts, oppId, oppPts: 0, oppName: 'Bye', win: false, tie: false, margin: 0,
+      median: median(scores), rank: st.rank, n, record: st.w + '-' + st.l + (st.t ? '-' + st.t : ''),
+      night: false, stars: 0, busts: 0, top: null, benchPts: me.bench || 0, home: false, trade: tradeImpact(league, week, rid),
+    };
+    (me.starters || []).forEach(([id, p]) => {
+      if (p >= STAR_PTS) res.stars++;
+      if (p < BUST_PTS) res.busts++;
+      if (!res.top || p > res.top.pts) res.top = { id, pts: p };
+    });
+    if (oppId != null) {
+      res.oppPts = wk.teams[oppId].pts;
+      res.oppName = teamName(league, oppId);
+      res.win = res.pts > res.oppPts;
+      res.tie = res.pts === res.oppPts;
+      res.margin = Math.abs(res.pts - res.oppPts);
+      const sl = slot(week, rid, oppId);
+      res.home = sl.home;
+      res.night = res.playoff || sl.night;
+    }
+    return res;
+  }
+
+  // ---- Franchise state ---------------------------------------------------------
+  function newFranchise(rid) {
+    return {
+      rid, cash: START_CASH, fans: START_FANS, hype: 50, stadium: 1, grid: {},
+      price: 1, promo: 'none', streak: 0, invested: 0, sellouts: 0, wins: 0, losses: 0,
+    };
+  }
+  function newGame(league, opts) {
+    const s = newFranchise(league.myRosterId);
+    s.v = 1;
+    s.name = (opts && opts.name) || teamName(league, league.myRosterId);
+    s.color = (opts && opts.color) || '#e4572e';
+    s.played = {};
+    s.history = [];
+    s.badges = {};
+    s.rivals = {};
+    league.teams.forEach((t) => {
+      if (t.rosterId !== league.myRosterId) s.rivals[t.rosterId] = newFranchise(t.rosterId);
+    });
+    return s;
+  }
+
+  function neighbors(k) {
+    const [r, c] = k.split('-').map(Number);
+    return [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]]
+      .filter(([a, b]) => a >= 0 && b >= 0 && a < GRID && b < GRID)
+      .map(([a, b]) => key(a, b));
+  }
+  const nearStadium = (k) => neighbors(k).some(isStadium);
+  const onEdge = (k) => { const [r, c] = k.split('-').map(Number); return r === 0 || c === 0 || r === GRID - 1 || c === GRID - 1; };
+
+  /** Placement multiplier for a building of `type` on lot `k`. */
+  function synergy(s, k, type) {
+    const adj = neighbors(k).map((n) => (s.grid[n] ? s.grid[n].type : null));
+    const count = (t) => adj.filter((a) => a === t).length;
+    switch (type) {
+      case 'concessions': return nearStadium(k) ? 1.2 : 1;
+      case 'suites': return nearStadium(k) ? 1.25 : 1;
+      case 'media': return nearStadium(k) ? 1.2 : 1;
+      case 'transit': return onEdge(k) ? 1.1 : 1;
+      case 'retail': return 1 + Math.min(0.3, 0.15 * (count('transit') + count('fanzone')));
+      case 'fanzone': return 1 + Math.min(0.3, 0.15 * count('concessions'));
+      default: return 1;
+    }
+  }
+
+  /** Aggregate building effects for a franchise. */
+  function effects(s) {
+    const by = {};
+    TYPES.forEach((t) => (by[t] = []));
+    let levels = 0;
+    for (const k in s.grid) {
+      const b = s.grid[k];
+      by[b.type].push(BUILDINGS[b.type].v[b.level - 1] * synergy(s, k, b.type));
+      levels += b.level;
+    }
+    const lv = (t) => Object.values(s.grid).filter((b) => b.type === t).reduce((a, b) => a + b.level, 0);
+    return {
+      capacity: STADIUM.cap[s.stadium - 1],
+      access: BASE_ACCESS + by.transit.reduce((a, b) => a + b, 0),
+      perCap: dim(by.concessions),
+      merch: dim(by.retail),
+      suites: dim(by.suites),
+      media: dim(by.media),
+      party: dim(by.fanzone),
+      hypeBoost: 1 + Math.min(0.5, 0.1 * lv('fanzone')),
+      bustCut: Math.min(0.9, by.medical.reduce((a, b) => a + b, 0)),
+      lossCut: Math.min(0.4, 0.1 * lv('medical')),
+      bench: dim(by.scouting),
+      growth: 1 + 0.08 * lv('scouting'),
+      upkeep: Math.round(s.invested * UPKEEP_RATE) + PAYROLL,
+      levels,
+    };
+  }
+
+  const turnoutRate = (s) => (0.25 + 0.6 * (s.hype / 100)) * PRICES[s.price].turnout;
+  function forecast(s) {
+    const e = effects(s);
+    const demand = Math.round(s.fans * turnoutRate(s));
+    return { demand, capacity: e.capacity, access: e.access, attendance: Math.min(demand, e.capacity, e.access), e };
+  }
+
+  function value(s) {
+    return Math.round(s.cash + s.invested * 0.7 + s.fans * 25 + s.hype * 10e3);
+  }
+
+  // ---- Actions -------------------------------------------------------------------
+  function canAfford(s, cost) { return s.cash >= cost; }
+  function build(s, k, type) {
+    if (isStadium(k) || s.grid[k] || !BUILDINGS[type]) return false;
+    const cost = BUILDINGS[type].cost[0];
+    if (!canAfford(s, cost)) return false;
+    s.cash -= cost; s.invested += cost;
+    s.grid[k] = { type, level: 1 };
+    return true;
+  }
+  function upgrade(s, k) {
+    const b = s.grid[k];
+    if (!b || b.level >= 3) return false;
+    const cost = BUILDINGS[b.type].cost[b.level];
+    if (!canAfford(s, cost)) return false;
+    s.cash -= cost; s.invested += cost; b.level++;
+    return true;
+  }
+  function spentOn(b) { return BUILDINGS[b.type].cost.slice(0, b.level).reduce((a, c) => a + c, 0); }
+  function refund(b) { return Math.round(spentOn(b) * 0.4); }
+  function demolish(s, k) {
+    const b = s.grid[k];
+    if (!b) return false;
+    s.cash += refund(b); s.invested -= spentOn(b);
+    delete s.grid[k];
+    return true;
+  }
+  function upgradeStadium(s) {
+    if (s.stadium >= 5) return false;
+    const cost = STADIUM.cost[s.stadium];
+    if (!canAfford(s, cost)) return false;
+    s.cash -= cost; s.invested += cost; s.stadium++;
+    return true;
+  }
+
+  // ---- Travelling fans ------------------------------------------------------------------
+  /** How many of the away owner's fans follow the team to the host's stadium. Hype is the main driver; a Transit
+      Hub and a win streak add to it. The host stadium only offers a fifth of its seats to visitors. */
+  function travelers(away, host) {
+    const transit = Object.values(away.grid).filter((b) => b.type === 'transit').reduce((a, b) => a + b.level, 0);
+    const rate = 0.01 + 0.05 * (away.hype / 100) + 0.005 * Math.min(4, transit) + (away.streak >= 3 ? 0.01 : 0);
+    return Math.round(Math.min(away.fans * rate, STADIUM.cap[host.stadium - 1] * 0.2));
+  }
+  /** Tag each team's result with its travelling support. Call before any franchise is settled, so both sides of a
+      matchup are measured from the same pre-game state. results: {rid: weekResult}, franchises: {rid: franchise}. */
+  function attachTravel(results, franchises) {
+    for (const rid in results) {
+      const r = results[rid], me = franchises[rid], opp = r && franchises[r.oppId];
+      if (!r || r.bye || !me || !opp) continue;
+      r.travel = r.home ? { in: travelers(opp, me), from: r.oppId } : { out: travelers(me, opp) };
+    }
+  }
+
+  // ---- Weekly settlement -------------------------------------------------------------
+  const BADGES = [
+    { id: 'sellout', name: 'First Sellout', reward: 100e3, test: (s, rep) => rep.sellout },
+    { id: 'streak3', name: 'Three Straight Wins', reward: 150e3, test: (s) => s.streak >= 3 },
+    { id: 'fans50', name: '50,000 Fans', reward: 200e3, test: (s) => s.fans >= 50e3 },
+    { id: 'fans150', name: '150,000 Fans', reward: 600e3, test: (s) => s.fans >= 150e3 },
+    { id: 'district', name: 'Ten Lots Developed', reward: 300e3, test: (s) => Object.keys(s.grid).length >= 10 },
+    { id: 'million', name: 'Million-Dollar Week', reward: 250e3, test: (s, rep) => rep.net >= 1e6 },
+    { id: 'playoffW', name: 'Playoff Win', reward: 500e3, test: (s, rep) => rep.r.playoff && rep.r.win },
+    { id: 'fever', name: 'Fever Pitch (95 hype)', reward: 200e3, test: (s) => s.hype >= 95 },
+  ];
+
+  /** Apply one fantasy week to a franchise. Mutates `s`, returns the report. */
+  function settle(s, r) {
+    const e = effects(s);
+    const lines = [];
+    const add = (label, amount, note) => { if (Math.round(amount)) lines.push({ label, amount: Math.round(amount), note }); };
+    const promo = s.promo || 'none';
+    const beatMedian = r.pts > r.median;
+    const scoreMult = r.median ? clamp(r.pts / r.median, 0.7, 1.5) : 1;
+    const shootoutPromo = promo === 'shootout' && beatMedian ? 1.5 : 1;
+    const tnet = r.trade ? r.trade.net : 0;
+    const rep = { r, lines, home: r.home, attendance: 0, capacity: e.capacity, sellout: false, limiter: null, promo, badges: [] };
+
+    if (r.home) {
+      let demand = s.fans * turnoutRate(s);
+      if (promo === 'giveaway') demand *= 1.15;
+      demand *= 1 + clamp(tnet * 0.012, -0.12, 0.12); // a blockbuster arrival sells seats; a fire sale empties them
+      if (r.playoff) demand *= 1.25;
+      const own = Math.round(Math.min(demand, e.capacity, e.access));
+      // visiting fans only get the seats the home crowd left empty, so a full house keeps them out
+      const visitors = r.travel && r.travel.in ? Math.max(0, Math.min(r.travel.in, Math.round(Math.min(e.capacity, e.access)) - own)) : 0;
+      const att = own + visitors;
+      rep.visitors = visitors;
+      rep.visitorShare = att ? visitors / att : 0;
+      rep.attendance = att;
+      rep.demand = Math.round(demand);
+      rep.sellout = att >= e.capacity;
+      rep.limiter = demand > att ? (e.access < e.capacity ? 'access' : 'capacity') : 'demand';
+      add('Tickets', att * PRICES[s.price].price * (r.playoff ? 1.5 : 1),
+        att.toLocaleString() + ' fans at ' + PRICES[s.price].name.toLowerCase() + ' prices' + (visitors ? ', including ' + visitors.toLocaleString() + ' visiting fans' : '') + (r.playoff ? ', playoff premium' : ''));
+      add('Concessions', att * e.perCap * scoreMult * shootoutPromo * (r.night ? 1.1 : 1),
+        'You scored ' + r.pts.toFixed(1) + ' vs a league median of ' + r.median.toFixed(1) + ' (x' + scoreMult.toFixed(2) + ')' + (r.night ? '. Night crowd +10%' : ''));
+      const standing = 1.5 - (r.n > 1 ? ((r.rank - 1) / (r.n - 1)) * 0.9 : 0);
+      add('VIP Suites', e.suites * standing * (r.playoff ? 2 : 1),
+        'Ranked ' + r.rank + ' of ' + r.n + ' in the league (x' + standing.toFixed(2) + ')' + (r.playoff ? ', doubled for the playoffs' : ''));
+    } else if (!r.bye) {
+      add('Watch Parties', s.fans * 0.2 * e.party * shootoutPromo, 'A fifth of the fanbase gathered at the Fan Plaza');
+      if (r.travel && r.travel.out) add('Road Merchandise', r.travel.out * 6, r.travel.out.toLocaleString() + ' of your fans travelled to the game');
+    }
+    const merchMult = (1 + 0.3 * r.stars) * (r.win ? 1.15 : 1) * (promo === 'guarantee' && r.win ? 1.2 : 1) * (1 + clamp(tnet * 0.04, 0, 0.5));
+    add('Merchandise', s.fans * e.merch * merchMult * (r.bye ? 0.5 : 1),
+      r.stars + (r.stars === 1 ? ' starter' : ' starters') + ' scored ' + STAR_PTS + '+' + (r.win ? ', plus a win bump' : '') + (tnet >= 1 ? ', plus a new-jersey rush from the trade' : ''));
+    if (!r.bye) {
+      const close = r.margin < 10, shoot = r.pts + r.oppPts > 2.3 * r.median;
+      const exc = 1 + (close ? 0.4 : 0) + (shoot ? 0.3 : 0) + (r.playoff ? 0.5 : 0) + (r.night ? 0.25 : 0);
+      add('Broadcast Rights', e.media * exc,
+        (close ? 'Decided by ' + r.margin.toFixed(1) + '. ' : '') + (shoot ? 'A shootout. ' : '') + (r.playoff ? 'Playoff audience. ' : '') + (r.night ? 'Prime-time slot +25%. ' : '') + (!close && !shoot && !r.playoff && !r.night ? 'A routine afternoon broadcast.' : ''));
+    }
+    add('League Revenue Share', SHARE, 'Every franchise gets an equal cut of the national deal');
+    add('Front Office', r.benchPts * e.bench, 'Your bench scored ' + r.benchPts.toFixed(1));
+    add('Payroll & Upkeep', -e.upkeep, 'Staff plus 2.5% of everything you have built');
+    if (PROMOS[promo].cost) add(PROMOS[promo].name, -PROMOS[promo].cost, 'Promotion cost');
+
+    // Hype: the fantasy result is the story of the week.
+    const hl = [];
+    const h = (label, d) => { if (Math.abs(d) >= 0.05) hl.push({ label, d }); };
+    if (!r.bye) {
+      if (r.win) h('Win', 7); else if (!r.tie) h('Loss', -7 * (1 - e.lossCut));
+      if (r.median) h(beatMedian ? 'Outscored the league median' : 'Below the league median', clamp(((r.pts - r.median) / r.median) * 20, -6, 8));
+      const streak = r.win ? Math.max(1, s.streak + 1) : r.tie ? 0 : Math.min(-1, s.streak - 1);
+      if (streak >= 3) h(streak + '-game win streak', 3);
+      if (r.stars) h(r.stars + ' star performance' + (r.stars > 1 ? 's' : ''), 1.5 * r.stars);
+      if (r.busts) h(r.busts + ' starter' + (r.busts > 1 ? 's' : '') + ' busted', -2 * r.busts * (1 - e.bustCut));
+      if (r.playoff && r.win) h('Playoff win', 6);
+      if (promo === 'guarantee') h(r.win ? 'Guarantee delivered' : 'Guarantee broken', r.win ? 8 : -8);
+      if (r.home && PRICES[s.price].hype) h(PRICES[s.price].name + ' ticket prices', PRICES[s.price].hype);
+      s.streak = streak;
+      if (r.win) s.wins++; else if (!r.tie) s.losses++;
+    }
+    if (r.travel && r.travel.out >= 500) h(r.travel.out.toLocaleString() + ' fans made the road trip', clamp(r.travel.out / 2000, 0.3, 3));
+    if (r.trade && Math.abs(tnet) >= 1) {
+      const who = tnet > 0 ? r.trade.in[0] : r.trade.out[0];
+      h(tnet > 0 ? 'Trade: fans welcome ' + ((who && who.n) || 'a new star') : 'Trade: fans miss ' + ((who && who.n) || 'a departed star'), clamp(tnet * 0.7, -9, 9));
+    }
+    let dh = hl.reduce((a, x) => a + (x.d > 0 ? x.d * e.hypeBoost : x.d), 0);
+    const hype0 = s.hype, fans0 = s.fans;
+    s.hype = clamp(s.hype + dh, 0, 100);
+    s.hype += (50 - s.hype) * 0.1; // excitement cools, despair fades
+    s.hype = Math.round(s.hype * 10) / 10;
+    const growth = ((s.hype - 40) / 100) * 0.18;
+    s.fans = Math.max(5e3, Math.round(s.fans * (1 + (growth > 0 ? growth * e.growth : growth)) + (r.win ? 400 : 0)));
+
+    rep.hypeLines = hl;
+    rep.hype = [hype0, s.hype];
+    rep.fans = [fans0, s.fans];
+    rep.net = lines.reduce((a, l) => a + l.amount, 0);
+    rep.gross = lines.reduce((a, l) => a + Math.max(0, l.amount), 0);
+    s.cash += rep.net;
+    if (rep.sellout) s.sellouts++;
+    s.promo = 'none';
+    if (s.badges) {
+      BADGES.forEach((b) => {
+        if (!s.badges[b.id] && b.test(s, rep)) { s.badges[b.id] = r.season + ':' + r.week; s.cash += b.reward; rep.badges.push(b); }
+      });
+    }
+    rep.cash = s.cash;
+    return rep;
+  }
+
+  // ---- Rival owners -------------------------------------------------------------------
+  // A fixed build order, rotated per team so the league does not develop identically.
+  const AI_PLAN = [
+    ['concessions', '0-1'], ['retail', '4-2'], ['transit', '4-1'], ['media', '1-0'], ['stadium'],
+    ['fanzone', '4-3'], ['suites', '3-1'], ['up', '0-1'], ['scouting', '0-4'], ['concessions', '1-3'],
+    ['up', '4-2'], ['stadium'], ['transit', '4-0'], ['up', '1-0'], ['medical', '0-0'], ['up', '3-1'],
+    ['up', '4-1'], ['suites', '2-3'], ['stadium'], ['up', '0-1'], ['up', '4-2'], ['up', '1-3'], ['up', '4-3'],
+    ['media', '0-2'], ['up', '1-0'], ['up', '3-1'], ['stadium'], ['up', '2-3'], ['up', '0-2'], ['up', '4-0'],
+  ];
+  function aiTurn(s) {
+    s.step = s.step || 0;
+    for (let guard = 0; guard < 3 && s.step < AI_PLAN.length; guard++) {
+      const [what, k] = AI_PLAN[s.step];
+      const reserve = 120e3;
+      let cost;
+      if (what === 'stadium') cost = STADIUM.cost[s.stadium] || Infinity;
+      else if (what === 'up') cost = s.grid[k] && s.grid[k].level < 3 ? BUILDINGS[s.grid[k].type].cost[s.grid[k].level] : 0;
+      else cost = s.grid[k] ? 0 : BUILDINGS[what].cost[0];
+      if (cost === 0 || cost === Infinity) { s.step++; continue; }
+      if (s.cash - reserve < cost) break;
+      if (what === 'stadium') upgradeStadium(s); else if (what === 'up') upgrade(s, k); else build(s, k, what);
+      s.step++;
+    }
+    // Rivals price by demand: premium when they would sell out anyway.
+    const f = forecast(s);
+    s.price = f.demand > Math.min(f.capacity, f.access) * 1.3 ? 2 : f.demand < Math.min(f.capacity, f.access) * 0.7 ? 0 : 1;
+  }
+
+  // ---- Turn flow ---------------------------------------------------------------------
+  const playedKey = (league, w) => league.season + ':' + w;
+  /** What is the next game day and can it be played yet? */
+  function nextWeek(s, league) {
+    const last = league.lastWeek || 17;
+    let backlog = 0, first = null;
+    for (let w = 1; w <= last; w++) {
+      if (s.played[playedKey(league, w)]) continue;
+      const wk = league.weeks[w];
+      if (wk && wk.complete) { backlog++; if (first == null) first = w; }
+      else if (first == null) {
+        return { week: w, status: wk && wk.live ? 'live' : 'waiting', backlog: 0, wk: wk || null };
+      } else break;
+    }
+    if (first == null) return { week: null, status: 'done', backlog: 0 };
+    return { week: first, status: 'ready', backlog, result: weekResult(league, first, s.rid) };
+  }
+  function playWeek(s, league) {
+    const nx = nextWeek(s, league);
+    if (nx.status !== 'ready' || !nx.result) return null;
+    // travelling support is measured before anyone settles
+    const results = { [s.rid]: nx.result }, all = { [s.rid]: s };
+    for (const id in s.rivals) { results[id] = weekResult(league, nx.week, +id); all[id] = s.rivals[id]; }
+    attachTravel(results, all);
+    const rep = settle(s, nx.result);
+    s.played[playedKey(league, nx.week)] = 1;
+    s.history.push(rep);
+    for (const id in s.rivals) {
+      const rr = results[id];
+      if (rr) { settle(s.rivals[id], rr); aiTurn(s.rivals[id]); }
+    }
+    return rep;
+  }
+  /** League table of franchise values, the player's included. */
+  function leaderboard(s, league) {
+    const through = Math.max(0, ...Object.keys(s.played).filter((k) => k.indexOf(league.season + ':') === 0).map((k) => +k.split(':')[1]));
+    const st = standings(league, through);
+    const rows = [{ rid: s.rid, me: true, f: s }].concat(Object.keys(s.rivals).map((id) => ({ rid: +id, me: false, f: s.rivals[id] })));
+    return rows
+      .filter((x) => league.teams.some((t) => t.rosterId === x.rid))
+      .map((x) => ({
+        rid: x.rid, me: x.me, name: x.me ? s.name : teamName(league, x.rid), value: value(x.f), fans: x.f.fans,
+        stadium: x.f.stadium, lots: Object.keys(x.f.grid).length,
+        record: st[x.rid] ? st[x.rid].w + '-' + st[x.rid].l + (st[x.rid].t ? '-' + st[x.rid].t : '') : '0-0',
+      }))
+      .sort((a, b) => b.value - a.value);
+  }
+
+  Object.assign(FT, {
+    GRID, STADIUM_TILES, BUILDINGS, TYPES, STADIUM, PRICES, PROMOS, BADGES, STAR_PTS, BUST_PTS,
+    key, isStadium, median, standings, teamName, weekResult, newGame, newFranchise, neighbors, nearStadium, onEdge,
+    synergy, effects, forecast, value, build, upgrade, demolish, refund, upgradeStadium, settle, aiTurn,
+    nextWeek, playWeek, leaderboard, clamp, slot, matchup, bonusTable, opponentOf, tradeImpact, playerAvg, travelers, attachTravel,
+  });
+  if (typeof module !== 'undefined' && module.exports) module.exports = FT;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>
+/* Franchise Tycoon — isometric city renderer. Everything is drawn in code on one canvas; there are no image assets. */
+(function (root) {
+  'use strict';
+  const FT = (root.FT = root.FT || {});
+  const HW = 60, HH = 30;                 // half tile width / height: a strict 2:1 isometric tile
+  const G = 5;
+  const VIEW = { x0: -485, x1: 485, y0: -232, y1: 486 };
+  const E = 2.25;                         // the island reaches this far beyond the 5x5 district
+  const P = (x, y, z) => [(x - y) * HW, (x + y) * HH - (z || 0)];
+
+  // ---- colour helpers ----------------------------------------------------------------
+  const cache = {};
+  function shade(hex, amt) {
+    const k = hex + amt;
+    if (cache[k]) return cache[k];
+    const n = parseInt(hex.slice(1), 16);
+    const f = (v) => Math.round(amt >= 0 ? v + (255 - v) * amt : v * (1 + amt));
+    const r = f(n >> 16), g = f((n >> 8) & 255), b = f(n & 255);
+    return (cache[k] = 'rgb(' + r + ',' + g + ',' + b + ')');
+  }
+  function hash(a, b) { let x = Math.imul(a + 1, 374761393) ^ Math.imul(b + 1, 668265263); x = Math.imul(x ^ (x >>> 13), 1274126177); return ((x ^ (x >>> 16)) >>> 0) / 4294967296; }
+
+  // ---- day and night ------------------------------------------------------------------
+  // Every fill and stroke colour passes through tone(). At night, surfaces are darkened and cooled while light
+  // sources keep their colour; by day, the same light sources read as plain glass.
+  let NIGHT = false, FLOOD = false;
+  const EMIT = {}, KEEP = { '#ff5a5a': 1, '#ff8a8a': 1 };
+  ['#ffd685', '#ffe2a6', '#cfe9ff', '#bfe9ff', '#9fd8ff', '#fff0c4', '#fff6d6', '#fff1c2', '#ffdf9a'].forEach((h) => {
+    EMIT[h] = 1; [-0.18, -0.2, -0.25].forEach((a) => (EMIT[shade(h, a)] = 2));
+  });
+  const toned = {};
+  function tone(v) {
+    if (typeof v !== 'string' || KEEP[v]) return v;
+    if (EMIT[v]) return NIGHT ? v : EMIT[v] === 1 ? '#b4d6e6' : '#8fb4c8';
+    if (!NIGHT || FLOOD) return v;
+    if (toned[v]) return toned[v];
+    let r, g, b, a = 1;
+    if (v.charAt(0) === '#' && v.length === 7) { const n = parseInt(v.slice(1), 16); r = n >> 16; g = (n >> 8) & 255; b = n & 255; }
+    else { const m = /^rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)(?:,\s*([\d.]+))?\)$/.exec(v); if (!m) return v; r = +m[1]; g = +m[2]; b = +m[3]; if (m[4] != null) a = +m[4]; }
+    return (toned[v] = 'rgba(' + Math.round(r * 0.36 + 5) + ',' + Math.round(g * 0.43 + 9) + ',' + Math.round(b * 0.66 + 20) + ',' + a + ')');
+  }
+  function hookTone(ctx) {
+    ['fillStyle', 'strokeStyle'].forEach((prop) => {
+      const d = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(ctx), prop);
+      if (!d || !d.set) return;
+      Object.defineProperty(ctx, prop, { get() { return d.get.call(ctx); }, set(v) { d.set.call(ctx, tone(v)); } });
+    });
+  }
+
+  const C = {
+    grass: '#3f7d5a', grassDark: '#2f6349', earth: '#6b4a3a', asphalt: '#2c3440', line: '#c9b458',
+    walk: '#b9b3a6', lot: '#4a8a62', concrete: '#9aa0a8', glass: '#5fb0c9', lit: '#ffd685', dim: '#31425c',
+    cream: '#efe6d2', brick: '#a65f48', white: '#eef1f4', steel: '#6d7887', red: '#e5484d', wood: '#8a6240',
+  };
+
+  function Renderer(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    hookTone(this.ctx);
+    this.night = false;
+    this.state = null;
+    this.hover = null;
+    this.selected = null;
+    this.t = 0;
+    this.particles = [];
+    this.score = null;
+    this.fill = 0.6;
+    this.resize();
+  }
+  const R = Renderer.prototype;
+
+  R.resize = function () {
+    const c = this.canvas, dpr = Math.min(2, root.devicePixelRatio || 1);
+    const w = c.clientWidth || 800, h = c.clientHeight || 560;
+    c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+    this.w = w; this.h = h; this.dpr = dpr;
+    this.base = Math.min(w / (VIEW.x1 - VIEW.x0), h / (VIEW.y1 - VIEW.y0));
+    if (this.zoom == null) this.resetView(); else this.applyView();
+  };
+  R.resetView = function () { this.zoom = 1; this.cx = (VIEW.x0 + VIEW.x1) / 2; this.cy = (VIEW.y0 + VIEW.y1) / 2; this.applyView(); };
+  R.applyView = function () {
+    this.zoom = FT.clamp(this.zoom, 0.8, 3.2);
+    this.cx = FT.clamp(this.cx, -560, 560); this.cy = FT.clamp(this.cy, -230, 470);
+    this.scale = this.base * this.zoom;
+    this.ox = this.w / 2 - this.cx * this.scale; this.oy = this.h / 2 - this.cy * this.scale;
+  };
+  /** Zoom by a factor, keeping the canvas point (px, py) fixed when given. */
+  R.zoomBy = function (f, px, py) {
+    const sx = px == null ? this.cx : (px - this.ox) / this.scale, sy = py == null ? this.cy : (py - this.oy) / this.scale;
+    const z0 = this.zoom; this.zoom = FT.clamp(z0 * f, 0.8, 3.2);
+    const k = this.zoom / z0;
+    this.cx = sx - (sx - this.cx) / k; this.cy = sy - (sy - this.cy) / k;
+    this.applyView();
+  };
+  R.panBy = function (dx, dy) { this.cx -= dx / this.scale; this.cy -= dy / this.scale; this.applyView(); };
+
+  /** Canvas client coordinates -> lot key ('r-c'), 'stadium', or null. Tall buildings are hit by their silhouette. */
+  R.pick = function (cx, cy) {
+    const sx = (cx - this.ox) / this.scale, sy = (cy - this.oy) / this.scale;
+    const cell = (y) => { const a = sx / HW, b = y / HH; return [Math.floor((b - a) / 2), Math.floor((a + b) / 2)]; };
+    let best = null;
+    for (let z = 0; z <= 120; z += 6) {
+      const [r, c] = cell(sy + z);
+      if (r < 0 || c < 0 || r >= G || c >= G) continue;
+      const k = r + '-' + c;
+      const h = FT.isStadium(k) ? 14 : this.state && this.state.grid[k] ? heightOf(this.state.grid[k]) : 0;
+      if (z <= h && (!best || r + c > best.d)) best = { k: FT.isStadium(k) ? 'stadium' : k, d: r + c };
+    }
+    return best ? best.k : null;
+  };
+  function heightOf(b) {
+    const h = { suites: [56, 74, 94], media: [58, 76, 96], scouting: [36, 48, 62], medical: [30, 38, 50], retail: [28, 36, 46], concessions: [20, 22, 32], transit: [8, 22, 36], fanzone: [24, 40, 48] };
+    return h[b.type][b.level - 1];
+  }
+
+  // ---- drawing primitives ---------------------------------------------------------------
+  function poly(ctx, pts, fill, stroke) {
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.closePath();
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
+  }
+  /** A cuboid on the ground plane. x,y = back corner (grid units), w,d = footprint, z = base height, h = height (px). */
+  function box(ctx, x, y, w, d, z, h, col, o) {
+    o = o || {};
+    const top = o.top || shade(col, 0.2), left = o.left || col, right = o.right || shade(col, -0.28);
+    poly(ctx, [P(x, y + d, z), P(x + w, y + d, z), P(x + w, y + d, z + h), P(x, y + d, z + h)], left);
+    poly(ctx, [P(x + w, y + d, z), P(x + w, y, z), P(x + w, y, z + h), P(x + w, y + d, z + h)], right);
+    poly(ctx, [P(x, y, z + h), P(x + w, y, z + h), P(x + w, y + d, z + h), P(x, y + d, z + h)], top);
+  }
+  /** A rectangle on the left (L) or right (R) visible wall of a box. u0..u1 across the wall (0..1), v0..v1 px above the base. */
+  function wallRect(ctx, side, x, y, w, d, z, u0, u1, v0, v1, fill) {
+    const q = side === 'L'
+      ? [P(x + w * u0, y + d, z + v0), P(x + w * u1, y + d, z + v0), P(x + w * u1, y + d, z + v1), P(x + w * u0, y + d, z + v1)]
+      : [P(x + w, y + d * (1 - u0), z + v0), P(x + w, y + d * (1 - u1), z + v0), P(x + w, y + d * (1 - u1), z + v1), P(x + w, y + d * (1 - u0), z + v1)];
+    poly(ctx, q, fill);
+  }
+  /** Rows of windows on both visible walls. Lit windows are chosen by a stable hash so they do not flicker. */
+  function windows(ctx, x, y, w, d, z, h, o) {
+    const rows = o.rows, cols = o.cols, seed = o.seed || 1;
+    const v0 = o.base == null ? 5 : o.base, vh = (h - v0 - (o.cap == null ? 4 : o.cap)) / rows;
+    ['L', 'R'].forEach((side, si) => {
+      const n = side === 'L' ? cols : Math.max(1, Math.round((cols * d) / w));
+      for (let r = 0; r < rows; r++) for (let c = 0; c < n; c++) {
+        const lit = hash(seed * 31 + si * 7 + r, c) < (o.litRate == null ? 0.62 : o.litRate);
+        const u0 = (c + 0.2) / n, u1 = (c + 0.8) / n;
+        wallRect(ctx, side, x, y, w, d, z, u0, u1, v0 + r * vh + vh * 0.2, v0 + r * vh + vh * 0.8,
+          lit ? (side === 'L' ? o.lit || C.lit : shade(o.lit || C.lit, -0.18)) : (side === 'L' ? C.dim : shade(C.dim, -0.2)));
+      }
+    });
+  }
+  /** Text painted flat on a wall: skewed to follow the isometric edge. */
+  function wallText(ctx, side, x, y, z, text, size, fill) {
+    const [px, py] = side === 'L' ? P(x, y, z) : P(x, y, z);
+    ctx.save();
+    ctx.transform(1, side === 'L' ? 0.5 : -0.5, 0, 1, px, py);
+    ctx.font = '700 ' + size + 'px "Barlow Condensed", "Arial Narrow", sans-serif';
+    ctx.fillStyle = fill; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+    ctx.fillText(text, 0, 0);
+    ctx.restore();
+  }
+  function ellipse(ctx, x, y, rx, ry, fill, stroke, lw) {
+    ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 1; ctx.stroke(); }
+  }
+  function glow(ctx, x, y, r, col, a) {
+    if (!NIGHT) return;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.save(); ctx.globalAlpha = a == null ? 0.6 : a; ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2); ctx.restore();
+  }
+  function tree(ctx, x, y, s) {
+    s = s || 1;
+    const [px, py] = P(x, y, 0);
+    ellipse(ctx, px + 2, py + 1, 8 * s, 4 * s, 'rgba(0,0,0,.22)');
+    ctx.fillStyle = '#5a4030'; ctx.fillRect(px - 1.5 * s, py - 9 * s, 3 * s, 10 * s);
+    ellipse(ctx, px, py - 14 * s, 9 * s, 10 * s, '#2c6b48');
+    ellipse(ctx, px - 2 * s, py - 18 * s, 6.5 * s, 7 * s, '#3f8f5d');
+    ellipse(ctx, px - 3.5 * s, py - 21 * s, 3 * s, 3 * s, '#62ad74');
+  }
+  function car(ctx, x, y, along, col) {
+    const w = along === 'x' ? 0.2 : 0.1, d = along === 'x' ? 0.1 : 0.2;
+    box(ctx, x - w / 2, y - d / 2, w, d, 1, 4, col);
+    box(ctx, x - w / 4, y - d / 4, w / 2, d / 2, 5, 3, '#23303f');
+  }
+  function awning(ctx, x, y, w, d, z, colA, colB, n) {
+    for (let i = 0; i < n; i++) box(ctx, x + (w * i) / n, y, w / n, d, z, 2.5, i % 2 ? colB : colA);
+  }
+  function umbrella(ctx, x, y, col) {
+    const [px, py] = P(x, y, 0);
+    ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, py - 11); ctx.stroke();
+    poly(ctx, [[px - 8, py - 9], [px, py - 15], [px + 8, py - 9], [px, py - 6]], col);
+    poly(ctx, [[px, py - 15], [px + 8, py - 9], [px, py - 6]], shade(col, -0.25));
+  }
+
+  // ---- buildings -----------------------------------------------------------------------
+  // Each takes the lot's back corner (gx = column, gy = row) and draws inside the unit tile.
+  const DRAW = {
+    concessions(ctx, gx, gy, lv, S) {
+      const team = S.color, stalls = lv === 1 ? [[0.14, 0.5], [0.54, 0.5]] : [[0.1, 0.56], [0.4, 0.56], [0.7, 0.56]];
+      if (lv === 3) {
+        box(ctx, gx + 0.14, gy + 0.12, 0.72, 0.4, 2, 24, C.cream);
+        windows(ctx, gx + 0.14, gy + 0.12, 0.72, 0.4, 2, 24, { rows: 1, cols: 5, seed: gx * 9 + gy, base: 6, cap: 8, litRate: 1 });
+        awning(ctx, gx + 0.1, gy + 0.08, 0.8, 0.5, 26, team, C.white, 8);
+        box(ctx, gx + 0.3, gy + 0.26, 0.4, 0.04, 28.5, 10, '#22303d');
+        wallText(ctx, 'L', gx + 0.33, gy + 0.3, 30, 'EATS', 9, C.lit);
+      }
+      stalls.forEach(([x, y], i) => {
+        const w = lv === 1 ? 0.3 : 0.22;
+        box(ctx, gx + x, gy + y, w, 0.24, 2, 12, i % 2 ? '#e9dcc0' : C.cream);
+        wallRect(ctx, 'L', gx + x, gy + y, w, 0.24, 2, 0.12, 0.88, 4, 10, C.lit);
+        awning(ctx, gx + x - 0.03, gy + y - 0.02, w + 0.06, 0.34, 14, i % 2 ? '#f2b33d' : team, C.white, 4);
+      });
+      if (lv >= 2) { umbrella(ctx, gx + 0.2, gy + 0.3, team); umbrella(ctx, gx + 0.82, gy + 0.36, '#f2b33d'); }
+      if (lv === 1) umbrella(ctx, gx + 0.5, gy + 0.26, '#f2b33d');
+    },
+    transit(ctx, gx, gy, lv, S, t) {
+      const cols = ['#d9534f', '#e8e2d0', '#4f8fd9', '#f2b33d', '#7a8794', '#3aa88f'];
+      const cars = (z, seed) => {
+        for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) {
+          if (hash(seed + i, j + gx * 3 + gy) < 0.25) continue;
+          const col = cols[Math.floor(hash(i + seed, j + gy) * cols.length)];
+          box(ctx, gx + 0.17 + i * 0.17, gy + 0.2 + j * 0.34, 0.1, 0.18, z, 4, col);
+        }
+      };
+      if (lv === 1) {
+        box(ctx, gx + 0.1, gy + 0.1, 0.8, 0.8, 2, 1.5, '#343d4a');
+        ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = 1;
+        for (let i = 0; i <= 4; i++) { const a = P(gx + 0.15 + i * 0.17, gy + 0.18, 3.5), b = P(gx + 0.15 + i * 0.17, gy + 0.74, 3.5); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+        cars(3.5, 1);
+        box(ctx, gx + 0.12, gy + 0.8, 0.26, 0.08, 3.5, 9, '#4f8fd9');
+      } else {
+        const decks = lv === 2 ? 2 : 3;
+        for (let i = 0; i < decks; i++) {
+          const z = 2 + i * 10;
+          box(ctx, gx + 0.1, gy + 0.1, 0.8, 0.8, z, 10, C.concrete);
+          wallRect(ctx, 'L', gx + 0.1, gy + 0.1, 0.8, 0.8, z, 0.04, 0.96, 2, 7, '#1f2731');
+          wallRect(ctx, 'R', gx + 0.1, gy + 0.1, 0.8, 0.8, z, 0.04, 0.96, 2, 7, '#171d25');
+          for (let c = 1; c < 5; c++) { wallRect(ctx, 'L', gx + 0.1, gy + 0.1, 0.8, 0.8, z, c / 5 - 0.012, c / 5 + 0.012, 2, 7, C.concrete); wallRect(ctx, 'R', gx + 0.1, gy + 0.1, 0.8, 0.8, z, c / 5 - 0.012, c / 5 + 0.012, 2, 7, shade(C.concrete, -0.28)); }
+        }
+        cars(2 + decks * 10, lv);
+        if (lv === 3) {
+          box(ctx, gx + 0.1, gy + 0.1, 0.3, 0.3, 32, 9, '#4f8fd9');
+          wallText(ctx, 'L', gx + 0.14, gy + 0.4, 33, 'RAIL', 8, C.white);
+          const slide = ((t * 0.05) % 1.6) - 0.3;
+          if (slide > 0 && slide < 0.62) { box(ctx, gx + slide, gy + 0.93, 0.34, 0.07, 2, 8, S.color); wallRect(ctx, 'L', gx + slide, gy + 0.93, 0.34, 0.07, 2, 0.06, 0.94, 3.5, 6.5, C.lit); }
+        }
+      }
+    },
+    retail(ctx, gx, gy, lv, S) {
+      const h = [26, 34, 44][lv - 1], x = gx + 0.16, y = gy + 0.18, w = 0.68, d = 0.62;
+      box(ctx, x, y, w, d, 2, h, '#d9d2c2');
+      wallRect(ctx, 'L', x, y, w, d, 2, 0.06, 0.94, 2, 13, C.lit);
+      wallRect(ctx, 'R', x, y, w, d, 2, 0.06, 0.94, 2, 13, shade(C.lit, -0.2));
+      wallRect(ctx, 'L', x, y, w, d, 2, 0.44, 0.56, 2, 13, '#7a5a3a');
+      if (lv > 1) windows(ctx, x, y, w, d, 2, h, { rows: lv - 1, cols: 4, seed: gx + gy * 5, base: 19, cap: 4 });
+      box(ctx, x - 0.02, y + d, w + 0.04, 0.08, 15, 2.5, S.color);
+      box(ctx, x + w, y - 0.02, 0.08, d + 0.04, 15, 2.5, shade(S.color, -0.2));
+      box(ctx, x + 0.1, y + 0.28, w - 0.2, 0.05, h + 2, 12, S.color);
+      wallText(ctx, 'L', x + 0.15, y + 0.33, h + 5, 'TEAM STORE', 7.5, C.white);
+    },
+    suites(ctx, gx, gy, lv, S) {
+      const h = [44, 62, 80][lv - 1], x = gx + 0.22, y = gy + 0.22, w = 0.56;
+      box(ctx, gx + 0.14, gy + 0.14, 0.72, 0.72, 2, 7, '#3b4656');
+      box(ctx, x, y, w, w, 9, h, '#3f7f98', { top: '#2a3a4a' });
+      windows(ctx, x, y, w, w, 9, h, { rows: Math.round(h / 9), cols: 4, seed: gx * 3 + gy * 11, base: 3, cap: 3, lit: '#ffe2a6', litRate: 0.7 });
+      box(ctx, x - 0.02, y - 0.02, w + 0.04, w + 0.04, 9 + h, 3, '#d8b45a');
+      if (lv >= 2) box(ctx, x + 0.16, y + 0.16, 0.24, 0.24, 12 + h, 6, '#2a3a4a');
+      if (lv === 3) { const a = P(x + 0.28, y + 0.28, 18 + h); ctx.strokeStyle = '#d8b45a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(a[0], a[1] - 16); ctx.stroke(); glow(ctx, a[0], a[1] - 16, 7, '#ffd685', 0.9); }
+    },
+    medical(ctx, gx, gy, lv) {
+      const h = [26, 34, 46][lv - 1], x = gx + 0.16, y = gy + 0.2, w = 0.68, d = 0.5;
+      if (lv >= 2) { box(ctx, gx + 0.56, gy + 0.56, 0.3, 0.32, 2, 16, '#dfe5ea'); windows(ctx, gx + 0.56, gy + 0.56, 0.3, 0.32, 2, 16, { rows: 1, cols: 2, seed: 5, lit: '#bfe9ff' }); }
+      box(ctx, x, y, w, d, 2, h, C.white);
+      windows(ctx, x, y, w, d, 2, h, { rows: lv + 1, cols: 5, seed: gx * 7 + gy, lit: '#bfe9ff', litRate: 0.75 });
+      wallRect(ctx, 'L', x, y, w, d, 2, 0.4, 0.6, 0, 9, '#4a6a85');
+      const cx = x + w / 2, cy = y + d / 2, z = h + 2.3;
+      if (lv === 3) {
+        const c = P(cx, cy, z); ellipse(ctx, c[0], c[1], 17, 8.5, '#3d4957', '#f2b33d', 1.5);
+        ctx.save(); ctx.font = '700 10px "Barlow Condensed", sans-serif'; ctx.fillStyle = C.white; ctx.textAlign = 'center'; ctx.fillText('H', c[0], c[1] + 3.5); ctx.restore();
+      } else {
+        poly(ctx, [P(cx - 0.16, cy - 0.05, z), P(cx + 0.16, cy - 0.05, z), P(cx + 0.16, cy + 0.05, z), P(cx - 0.16, cy + 0.05, z)], C.red);
+        poly(ctx, [P(cx - 0.05, cy - 0.16, z), P(cx + 0.05, cy - 0.16, z), P(cx + 0.05, cy + 0.16, z), P(cx - 0.05, cy + 0.16, z)], C.red);
+      }
+      box(ctx, x + 0.04, y + d, 0.14, 0.02, 14, 8, C.red);
+    },
+    scouting(ctx, gx, gy, lv, S, t) {
+      const h = [32, 44, 58][lv - 1], x = gx + 0.18, y = gy + 0.2, w = 0.64, d = 0.56;
+      box(ctx, x - 0.03, y - 0.03, w + 0.06, d + 0.06, 2, 5, '#c9c2b2');
+      box(ctx, x, y, w, d, 7, h - 5, C.brick);
+      windows(ctx, x, y, w, d, 7, h - 5, { rows: lv + 1, cols: 4, seed: gx + gy * 13, base: 4, cap: 4 });
+      box(ctx, x - 0.02, y - 0.02, w + 0.04, d + 0.04, h + 2, 2.5, '#c9c2b2');
+      wallRect(ctx, 'L', x, y, w, d, 2, 0.42, 0.58, 0, 10, '#3d2a22');
+      const p = P(x + 0.12, y + 0.12, h + 4.5);
+      ctx.strokeStyle = '#d7dbe0'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(p[0], p[1] - 20); ctx.stroke();
+      const wv = Math.sin(t * 0.25) * 1.5;
+      poly(ctx, [[p[0], p[1] - 20], [p[0] + 12, p[1] - 18 + wv], [p[0] + 12, p[1] - 11 + wv], [p[0], p[1] - 13]], S.color);
+      if (lv === 3) { const c = P(x + w / 2, y + d, h - 6); ellipse(ctx, c[0], c[1] + 0, 5, 5, C.cream, '#3d2a22', 1); }
+    },
+    media(ctx, gx, gy, lv, S, t) {
+      const th = [56, 74, 94][lv - 1];
+      box(ctx, gx + 0.14, gy + 0.3, 0.72, 0.52, 2, 16 + lv * 3, '#55606f');
+      windows(ctx, gx + 0.14, gy + 0.3, 0.72, 0.52, 2, 16 + lv * 3, { rows: 1, cols: 5, seed: gx * 5 + gy * 3, base: 5, cap: 5, lit: '#9fd8ff' });
+      if (lv >= 2) { wallRect(ctx, 'R', gx + 0.14, gy + 0.3, 0.72, 0.52, 2, 0.15, 0.85, 4, 17, '#0d1620'); wallRect(ctx, 'R', gx + 0.14, gy + 0.3, 0.72, 0.52, 2, 0.19, 0.81, 6, 15, Math.floor(t / 14) % 2 ? S.color : '#3fa7d6'); }
+      const d = P(gx + 0.7, gy + 0.62, 20 + lv * 3);
+      ellipse(ctx, d[0], d[1] - 3, 7, 5, '#dfe5ea', '#8a95a3', 1);
+      // lattice mast
+      const base = [P(gx + 0.24, gy + 0.36, 0), P(gx + 0.44, gy + 0.36, 0), P(gx + 0.34, gy + 0.5, 0)];
+      const tip = P(gx + 0.34, gy + 0.42, th);
+      ctx.strokeStyle = '#c5ccd6'; ctx.lineWidth = 1.2;
+      base.forEach((b) => { ctx.beginPath(); ctx.moveTo(b[0], b[1] - 18); ctx.lineTo(tip[0], tip[1]); ctx.stroke(); });
+      ctx.lineWidth = 0.8;
+      for (let i = 1; i < 7; i++) {
+        const f = i / 7, q = base.map((b) => [b[0] + (tip[0] - b[0]) * f, b[1] - 18 + (tip[1] - b[1] + 18) * f]);
+        ctx.beginPath(); ctx.moveTo(q[0][0], q[0][1]); ctx.lineTo(q[1][0], q[1][1]); ctx.lineTo(q[2][0], q[2][1]); ctx.closePath(); ctx.stroke();
+      }
+      if (Math.floor(t / 10) % 2) glow(ctx, tip[0], tip[1], 9, '#ff5a5a', 1);
+      ellipse(ctx, tip[0], tip[1], 1.6, 1.6, '#ff5a5a');
+    },
+    fanzone(ctx, gx, gy, lv, S, t, R) {
+      box(ctx, gx + 0.08, gy + 0.08, 0.84, 0.84, 2, 1, '#cbbfa6');
+      const c = P(gx + 0.56, gy + 0.6, 3);
+      ellipse(ctx, c[0], c[1], 13, 6.5, '#8fa3ad'); ellipse(ctx, c[0], c[1], 10.5, 5.2, '#4fb4d8'); ellipse(ctx, c[0], c[1] - 1.5, 3.5, 1.8, '#d5f1fb');
+      tree(ctx, gx + 0.2, gy + 0.22, 0.8);
+      if (lv >= 2) {
+        box(ctx, gx + 0.3, gy + 0.14, 0.5, 0.05, 3, 30, '#1a222c');
+        wallRect(ctx, 'L', gx + 0.3, gy + 0.14, 0.5, 0.05, 3, 0.05, 0.95, 8, 28, S.color);
+        if (R.score) wallText(ctx, 'L', gx + 0.36, gy + 0.19, 14, R.score, 10, C.white);
+        glow(ctx, P(gx + 0.55, gy + 0.3, 20)[0], P(gx + 0.55, gy + 0.3, 20)[1], 26, S.color, 0.35);
+      }
+      tree(ctx, gx + 0.2, gy + 0.78, 0.8);
+      if (lv === 3) {
+        box(ctx, gx + 0.66, gy + 0.72, 0.2, 0.16, 3, 9, C.white); awning(ctx, gx + 0.63, gy + 0.69, 0.26, 0.22, 12, S.color, C.white, 4);
+        ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 0.8;
+        const a = P(gx + 0.1, gy + 0.9, 26), b = P(gx + 0.9, gy + 0.9, 26);
+        ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.quadraticCurveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 + 10, b[0], b[1]); ctx.stroke();
+        for (let i = 1; i < 8; i++) { const f = i / 8, x = a[0] + (b[0] - a[0]) * f, y = a[1] + (b[1] - a[1]) * f + Math.sin(f * Math.PI) * 5; ellipse(ctx, x, y, 1.6, 1.6, i % 2 ? '#ffd685' : S.color); }
+        [a, b].forEach((q) => { ctx.strokeStyle = '#8a95a3'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(q[0], q[1]); ctx.lineTo(q[0], q[1] + 24); ctx.stroke(); });
+      }
+    },
+  };
+
+  R.drawLot = function (ctx, r, c) {
+    const k = r + '-' + c, b = this.state.grid[k], gx = c, gy = r, m = 0.06;
+    const isSel = this.selected === k, isHov = this.hover === k;
+    box(ctx, gx + m, gy + m, 1 - 2 * m, 1 - 2 * m, 0, 2, b ? C.walk : C.lot, b ? null : { top: isHov || isSel ? '#62ad7a' : C.lot, left: '#3a7350', right: '#2c5a40' });
+    if (!b) {
+      const q = [P(gx + 0.16, gy + 0.16, 2), P(gx + 0.84, gy + 0.16, 2), P(gx + 0.84, gy + 0.84, 2), P(gx + 0.16, gy + 0.84, 2)];
+      ctx.save(); ctx.setLineDash([4, 4]); poly(ctx, q, null, isSel ? '#fff' : 'rgba(255,255,255,.28)'); ctx.restore();
+      if (hash(r, c) < 0.4) tree(ctx, gx + 0.3, gy + 0.3, 0.55);
+    } else {
+      DRAW[b.type](ctx, gx, gy, b.level, this.state, this.t, this);
+    }
+    if (isSel || isHov) {
+      const q = [P(gx + m, gy + m, 2), P(gx + 1 - m, gy + m, 2), P(gx + 1 - m, gy + 1 - m, 2), P(gx + m, gy + 1 - m, 2)];
+      ctx.save(); ctx.lineWidth = 2; ctx.globalAlpha = isSel ? 1 : 0.55;
+      ctx.beginPath(); q.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.closePath();
+      ctx.strokeStyle = '#fff'; ctx.stroke();
+      if (b) { ctx.globalAlpha = 0.12; ctx.fillStyle = '#fff'; ctx.fill(); }
+      ctx.restore();
+    }
+  };
+
+  R.drawStadium = function (ctx) {
+    const S = this.state, lv = S.stadium, t = this.t;
+    const [cx, cy] = P(2, 2, 3);
+    const a = 99, b = 40.5, H = [15, 19, 23, 27, 31][lv - 1], ai = 65, bi = 25;
+    const sel = this.selected === 'stadium' || this.hover === 'stadium';
+    // plaza
+    poly(ctx, [P(1.04, 1.04, 2), P(2.96, 1.04, 2), P(2.96, 2.96, 2), P(1.04, 2.96, 2)], sel ? '#c9c4b8' : '#aaa598');
+    ellipse(ctx, cx, cy + 4, a + 5, b + 4, 'rgba(0,0,0,.25)');
+    // far-side light towers and roof go behind the bowl
+    const towers = lv >= 2 ? [[-a * 0.72, -b * 0.62], [a * 0.72, -b * 0.62]] : [];
+    const tower = (dx, dy) => {
+      const x = cx + dx, y = cy + dy, top = y - H - 46 - lv * 3;
+      ctx.strokeStyle = '#aab3bf'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y - H + 4); ctx.lineTo(x, top); ctx.stroke();
+      ctx.fillStyle = '#e9edf2'; ctx.fillRect(x - 8, top - 6, 16, 8);
+      ctx.fillStyle = '#fff6d6'; for (let i = 0; i < 4; i++) ctx.fillRect(x - 7 + i * 4, top - 5, 3, 6);
+      glow(ctx, x, top - 2, 22, '#fff1c2', 0.4);
+    };
+    towers.forEach((p) => tower(p[0], p[1]));
+    // seating bowl seen through the rim
+    const ry = cy - H;
+    ctx.save();
+    ctx.beginPath(); ctx.ellipse(cx, ry, a, b, 0, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = '#39465a'; ctx.fillRect(cx - a, ry - b, a * 2, b * 2 + H);
+    for (let i = 0; i <= 6; i++) {
+      const f = i / 6;
+      ellipse(ctx, cx, ry + (cy - 2 - ry) * f, a + (ai - a) * f, b + (bi - b) * f, i % 2 ? '#445369' : '#3b485c');
+    }
+    // the crowd: one dot per seat block, filled by attendance
+    const dots = 700, fillTo = this.fill;
+    for (let i = 0; i < dots; i++) {
+      if (hash(i, 3) > fillTo) continue;
+      const f = 0.06 + hash(i, 1) * 0.86, th = hash(i, 2) * Math.PI * 2;
+      const ex = cx + Math.cos(th) * (a + (ai - a) * f), ey = ry + (cy - 2 - ry) * f + Math.sin(th) * (b + (bi - b) * f);
+      const pick = hash(i, 5);
+      ctx.fillStyle = pick < 0.5 ? S.color : pick < 0.8 ? '#f1ede3' : '#1d2632';
+      const bob = this.gameDay ? Math.sin(t * 0.5 + i) * 0.7 : 0;
+      ctx.fillRect(ex - 1, ey - 1 + bob, 2, 2);
+    }
+    // field
+    ellipse(ctx, cx, cy - 2, ai, bi, '#2c5d43');
+    const fw = 49, fh = 12, fy = cy - 2;
+    ctx.fillStyle = '#3f9a5c'; ctx.fillRect(cx - fw, fy - fh, fw * 2, fh * 2);
+    for (let i = 0; i < 10; i++) { if (i % 2) { ctx.fillStyle = 'rgba(255,255,255,.07)'; ctx.fillRect(cx - fw + 9 + i * 8, fy - fh, 8, fh * 2); } }
+    ctx.fillStyle = S.color; ctx.fillRect(cx - fw, fy - fh, 9, fh * 2); ctx.fillRect(cx + fw - 9, fy - fh, 9, fh * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 0.8; ctx.strokeRect(cx - fw, fy - fh, fw * 2, fh * 2);
+    for (let i = 1; i < 10; i++) { ctx.beginPath(); ctx.moveTo(cx - fw + 9 + i * 8, fy - fh); ctx.lineTo(cx - fw + 9 + i * 8, fy + fh); ctx.globalAlpha = i === 5 ? 0.9 : 0.4; ctx.stroke(); }
+    ctx.globalAlpha = 1;
+    ellipse(ctx, cx, fy, 4, 2, null, 'rgba(255,255,255,.8)', 0.8);
+    ctx.restore();
+    // near-side outer wall (a half cylinder from the rim down to the plaza)
+    const wall = ctx.createLinearGradient(cx - a, 0, cx + a, 0);
+    wall.addColorStop(0, '#c7ccd3'); wall.addColorStop(0.5, '#9aa1ab'); wall.addColorStop(1, '#646c78');
+    ctx.beginPath(); ctx.ellipse(cx, ry, a, b, 0, 0, Math.PI, false); ctx.ellipse(cx, cy, a, b, 0, Math.PI, 0, true); ctx.closePath();
+    ctx.fillStyle = wall; ctx.fill();
+    // concourse lights and pillars
+    ctx.save();
+    ctx.beginPath(); ctx.ellipse(cx, ry, a, b, 0, 0, Math.PI, false); ctx.ellipse(cx, cy, a, b, 0, Math.PI, 0, true); ctx.closePath(); ctx.clip();
+    ctx.setLineDash([5, 4]); ctx.lineWidth = Math.max(3, H * 0.28);
+    ellipse(ctx, cx, ry + H * 0.55, a - 0.5, b - 0.5, null, 'rgba(255,214,133,.9)', ctx.lineWidth);
+    ctx.setLineDash([]);
+    ctx.lineWidth = 3; ellipse(ctx, cx, cy - 1.5, a, b, null, S.color, 3);
+    ctx.restore();
+    // rim
+    ellipse(ctx, cx, ry, a, b, null, '#e6e9ee', 2.5);
+    if (lv >= 3) {
+      // canopy over the far stands
+      ctx.beginPath(); ctx.ellipse(cx, ry - 9, a + 4, b + 3, 0, Math.PI * 1.04, Math.PI * 1.96, false);
+      ctx.ellipse(cx, ry - 4, a - 14 - lv * 3, b - 8 - lv * 2, 0, Math.PI * 1.96, Math.PI * 1.04, true); ctx.closePath();
+      ctx.fillStyle = lv >= 5 ? 'rgba(238,241,244,.92)' : 'rgba(215,221,229,.85)'; ctx.fill();
+      ctx.strokeStyle = S.color; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+    // scoreboard at the far end
+    const sx = cx, sy = ry - b - 12 - (lv >= 3 ? 6 : 0);
+    ctx.fillStyle = '#7a8491'; ctx.fillRect(sx - 20, sy + 12, 2, 12); ctx.fillRect(sx + 18, sy + 12, 2, 12);
+    ctx.fillStyle = '#10171f'; ctx.fillRect(sx - 27, sy - 4, 54, 18);
+    ctx.strokeStyle = '#8a95a3'; ctx.lineWidth = 1; ctx.strokeRect(sx - 27, sy - 4, 54, 18);
+    ctx.font = '700 12px "Barlow Condensed", "Arial Narrow", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffd685'; ctx.fillText(this.score || 'KICKOFF', sx, sy + 5.5);
+    // near-side towers stand in front of the bowl
+    if (lv >= 4) [[-a * 0.86, b * 0.3], [a * 0.86, b * 0.3]].forEach((p) => tower(p[0], p[1] + H));
+    if (lv === 1) glow(ctx, cx, cy - 10, 70, '#fff1c2', 0.12); else glow(ctx, cx, cy - 6, 95, '#fff1c2', 0.16 + lv * 0.03);
+  };
+
+  // ---- the town around the district (scenery only) -----------------------------------------
+  function gable(ctx, x, y, w, d, z, h, roof, wall) {
+    poly(ctx, [P(x, y, z), P(x + w, y, z), P(x + w, y + d / 2, z + h), P(x, y + d / 2, z + h)], shade(roof, -0.4));
+    poly(ctx, [P(x, y + d, z), P(x + w, y + d, z), P(x + w, y + d / 2, z + h), P(x, y + d / 2, z + h)], roof);
+    poly(ctx, [P(x + w, y + d, z), P(x + w, y, z), P(x + w, y + d / 2, z + h)], shade(wall, -0.28));
+  }
+  function house(ctx, x, y, wall, roof, seed) {
+    const w = 0.26, d = 0.24;
+    box(ctx, x, y, w, d, 2, 10, wall);
+    wallRect(ctx, 'L', x, y, w, d, 2, 0.12, 0.42, 3, 8, hash(seed, 1) < 0.7 ? C.lit : C.dim);
+    wallRect(ctx, 'L', x, y, w, d, 2, 0.6, 0.82, 0, 7, '#5a4030');
+    wallRect(ctx, 'R', x, y, w, d, 2, 0.3, 0.7, 3, 8, hash(seed, 2) < 0.6 ? shade(C.lit, -0.18) : shade(C.dim, -0.2));
+    gable(ctx, x - 0.02, y - 0.02, w + 0.04, d + 0.04, 12, 8, roof, wall);
+  }
+  function bench(ctx, x, y) { box(ctx, x, y, 0.1, 0.04, 2, 2.5, C.wood); }
+  function lamp(ctx, x, y) {
+    const p = P(x, y, 0);
+    ctx.strokeStyle = '#7d8896'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(p[0], p[1] - 15); ctx.stroke();
+    ellipse(ctx, p[0], p[1] - 15.5, 1.7, 1.7, '#fff1c2');
+    glow(ctx, p[0], p[1] - 14, 11, '#ffdf9a', 0.5);
+  }
+  const SKIN = ['#f1c9a5', '#c68e62', '#8d5a3b', '#e0ac7e'];
+  const SHIRT = ['#e4572e', '#f2b33d', '#4f8fd9', '#3aa88f', '#e8e2d0', '#b06ab3', '#d9436b', '#7fb8e6'];
+  function person(ctx, x, y, i, t) {
+    const p = P(x, y, 0), step = Math.sin(t * 0.6 + i * 2.1) > 0 ? 1 : 0;
+    ctx.fillStyle = '#27303c'; ctx.fillRect(p[0] - 1.3, p[1] - 3, 1.1, 3 - step * 0.8); ctx.fillRect(p[0] + 0.2, p[1] - 3, 1.1, 2.2 + step * 0.8);
+    ctx.fillStyle = SHIRT[i % SHIRT.length]; ctx.fillRect(p[0] - 1.5, p[1] - 7.4, 3, 4.6);
+    ellipse(ctx, p[0], p[1] - 8.8, 1.5, 1.5, SKIN[i % SKIN.length]);
+  }
+
+  const TOWN = {
+    office(ctx, gx, gy, v) {
+      const col = ['#4a7f99', '#6c7396', '#8b7d70', '#3f8f8a'][v % 4], h = 54 + ((v * 7) % 4) * 11;
+      box(ctx, gx + 0.1, gy + 0.1, 0.8, 0.8, 2, 8, '#3b4656');
+      wallRect(ctx, 'L', gx + 0.1, gy + 0.1, 0.8, 0.8, 2, 0.1, 0.9, 1.5, 6.5, C.lit);
+      box(ctx, gx + 0.18, gy + 0.18, 0.64, 0.64, 10, h, col, { top: '#2a3a4a' });
+      windows(ctx, gx + 0.18, gy + 0.18, 0.64, 0.64, 10, h, { rows: Math.round(h / 8), cols: 5, seed: v * 13 + 3, base: 3, cap: 3, litRate: 0.5, lit: v % 2 ? '#ffe2a6' : '#cfe9ff' });
+      box(ctx, gx + 0.36, gy + 0.36, 0.26, 0.26, 10 + h, 5, '#55606f');
+      if (v % 2) { const a = P(gx + 0.5, gy + 0.5, 15 + h); ctx.strokeStyle = '#c5ccd6'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(a[0], a[1] - 12); ctx.stroke(); }
+    },
+    apartments(ctx, gx, gy, v) {
+      const col = ['#b98a6a', '#9c8f86', '#c2a07a'][v % 3], h = 38 + (v % 2) * 12, x = gx + 0.14, y = gy + 0.18, w = 0.72, d = 0.62;
+      box(ctx, x, y, w, d, 2, h, col);
+      windows(ctx, x, y, w, d, 2, h, { rows: Math.round(h / 10), cols: 4, seed: v * 5 + 11, base: 9, cap: 3, litRate: 0.6 });
+      wallRect(ctx, 'L', x, y, w, d, 2, 0.42, 0.58, 0, 7, '#3d2a22');
+      box(ctx, x - 0.02, y - 0.02, w + 0.04, d + 0.04, h + 2, 2, shade(col, 0.25));
+      box(ctx, x + 0.14, y + 0.16, 0.14, 0.14, h + 4, 9, '#7a5a3a');
+    },
+    cityhall(ctx, gx, gy, v, S, t) {
+      box(ctx, gx + 0.04, gy + 0.08, 0.92, 0.88, 2, 2.5, '#d9d3c4');
+      box(ctx, gx + 0.09, gy + 0.11, 0.82, 0.78, 4.5, 2.5, '#cfc8b8');
+      const x = gx + 0.14, y = gy + 0.14, w = 0.72, d = 0.62, z = 7, h = 26;
+      box(ctx, x, y, w, d, z, h, '#e6dfcc');
+      wallRect(ctx, 'L', x, y, w, d, z, 0.05, 0.95, 1, 21, '#7f7765');
+      for (let c = 0; c < 7; c++) wallRect(ctx, 'L', x, y, w, d, z, (c + 0.2) / 7, (c + 0.62) / 7, 1, 21, '#f8f3e4');
+      wallRect(ctx, 'L', x, y, w, d, z, 0.44, 0.56, 1, 13, '#5a4030');
+      for (let c = 0; c < 4; c++) for (let r = 0; r < 2; r++) wallRect(ctx, 'R', x, y, w, d, z, (c + 0.25) / 4, (c + 0.75) / 4, 4 + r * 10, 10 + r * 10, shade(C.lit, -0.18));
+      box(ctx, x - 0.02, y - 0.02, w + 0.04, d + 0.04, z + h, 2.5, '#cfc8b8');
+      poly(ctx, [P(x, y + d + 0.02, z + h + 2.5), P(x + w, y + d + 0.02, z + h + 2.5), P(x + w / 2, y + d + 0.02, z + h + 14)], '#f1ecdc', '#a59d8a');
+      const c = P(x + w / 2, y + d / 2 - 0.04, z + h + 2.5);
+      ctx.fillStyle = '#d9d3c4'; ctx.fillRect(c[0] - 14, c[1] - 9, 28, 9); ellipse(ctx, c[0], c[1], 14, 7, '#c9c2b2');
+      ctx.beginPath(); ctx.ellipse(c[0], c[1] - 9, 14, 15, 0, Math.PI, 0); ctx.closePath(); ctx.fillStyle = '#6fae9a'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(c[0] + 4, c[1] - 9, 10, 15, 0, Math.PI * 1.5, 0); ctx.lineTo(c[0] + 4, c[1] - 9); ctx.closePath(); ctx.fillStyle = 'rgba(0,0,0,.16)'; ctx.fill();
+      ellipse(ctx, c[0], c[1] - 9, 14, 7, '#7dbba7');
+      ctx.fillStyle = '#e6dfcc'; ctx.fillRect(c[0] - 2, c[1] - 30, 4, 7);
+      ellipse(ctx, c[0], c[1] - 31, 2.2, 2.2, '#ffd685'); glow(ctx, c[0], c[1] - 31, 9, '#ffd685', 0.7);
+      const f = P(x + 0.08, y + d - 0.06, z + h + 2.5), wv = Math.sin(t * 0.25 + 1) * 1.4;
+      ctx.strokeStyle = '#d7dbe0'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(f[0], f[1]); ctx.lineTo(f[0], f[1] - 20); ctx.stroke();
+      poly(ctx, [[f[0], f[1] - 20], [f[0] + 11, f[1] - 18 + wv], [f[0] + 11, f[1] - 12 + wv], [f[0], f[1] - 13]], S.color);
+    },
+    library(ctx, gx, gy) {
+      const x = gx + 0.12, y = gy + 0.2, w = 0.76, d = 0.56, z = 5;
+      box(ctx, gx + 0.08, gy + 0.16, 0.84, 0.72, 2, 3, '#cfc8b8');
+      box(ctx, x, y, w, d, z, 22, '#9e5f4b');
+      for (let c = 0; c < 5; c++) wallRect(ctx, 'L', x, y, w, d, z, (c + 0.34) / 5, (c + 0.66) / 5, 0, 20, c === 2 ? '#3d2a22' : '#f1ecdc');
+      for (let c = 0; c < 4; c++) wallRect(ctx, 'L', x, y, w, d, z, c < 2 ? (c + 0.72) / 5 : (c + 1.72) / 5, c < 2 ? (c + 1.28) / 5 : (c + 2.28) / 5, 5, 16, C.lit);
+      for (let c = 0; c < 3; c++) wallRect(ctx, 'R', x, y, w, d, z, (c + 0.25) / 3, (c + 0.75) / 3, 5, 16, shade(C.lit, -0.18));
+      gable(ctx, x - 0.03, y - 0.03, w + 0.06, d + 0.06, z + 22, 13, '#55606f', '#9e5f4b');
+      wallText(ctx, 'L', x + 0.2, y + d + 0.02, z + 22.5, 'LIBRARY', 6.5, '#f1ecdc');
+    },
+    diner(ctx, gx, gy, v, S, t, face) {
+      const x = gx + 0.16, y = gy + 0.22, w = 0.62, d = 0.44;
+      box(ctx, x, y, w, d, 2, 14, '#d5dbe2');
+      ['L', 'R'].forEach((s) => { wallRect(ctx, s, x, y, w, d, 2, 0, 1, 2, 4.5, s === 'L' ? C.red : shade(C.red, -0.25)); wallRect(ctx, s, x, y, w, d, 2, 0.06, 0.94, 6, 12, s === 'L' ? C.lit : shade(C.lit, -0.18)); });
+      box(ctx, x - 0.02, y - 0.02, w + 0.04, d + 0.04, 16, 2, C.red);
+      if (face === 'R') { box(ctx, x + 0.5, y + 0.06, 0.05, 0.32, 18, 9, '#22303d'); wallText(ctx, 'R', x + 0.55, y + 0.36, 20, 'DINER', 7, Math.floor(t / 16) % 2 ? '#ff8a8a' : '#ffd685'); }
+      else { box(ctx, x + 0.1, y + 0.3, 0.42, 0.05, 18, 9, '#22303d'); wallText(ctx, 'L', x + 0.13, y + 0.35, 20, 'DINER', 7, Math.floor(t / 16) % 2 ? '#ff8a8a' : '#ffd685'); }
+      umbrella(ctx, gx + 0.22, gy + 0.84, C.red); umbrella(ctx, gx + 0.86, gy + 0.5, '#f2b33d');
+    },
+    cafe(ctx, gx, gy, v, S) {
+      const col = ['#3d8f86', '#c2703d', '#7a5ea8'][v % 3], x = gx + 0.2, y = gy + 0.2, w = 0.5, d = 0.46;
+      box(ctx, x, y, w, d, 2, 18, col);
+      wallRect(ctx, 'L', x, y, w, d, 2, 0.08, 0.6, 2, 11, C.lit); wallRect(ctx, 'L', x, y, w, d, 2, 0.7, 0.92, 0, 11, '#3d2a22');
+      wallRect(ctx, 'R', x, y, w, d, 2, 0.1, 0.9, 2, 11, shade(C.lit, -0.18));
+      awning(ctx, x - 0.02, y + d, w + 0.04, 0.1, 13, C.white, col, 5);
+      box(ctx, x - 0.02, y - 0.02, w + 0.04, d + 0.04, 20, 2, shade(col, 0.3));
+      umbrella(ctx, gx + 0.3, gy + 0.86, col); umbrella(ctx, gx + 0.62, gy + 0.86, '#f2b33d'); umbrella(ctx, gx + 0.86, gy + 0.6, C.white);
+      tree(ctx, gx + 0.86, gy + 0.2, 0.6);
+    },
+    houses(ctx, gx, gy, v) {
+      const walls = ['#e9dcc0', '#c9d6df', '#e3b9a0', '#d7dfc3'], roofs = ['#8a4b3a', '#4f5d6e', '#6b4a3a', '#7a4f6a'];
+      tree(ctx, gx + 0.2, gy + 0.18, 0.55);
+      house(ctx, gx + 0.56, gy + 0.12, walls[v % 4], roofs[v % 4], v);
+      house(ctx, gx + 0.12, gy + 0.5, walls[(v + 1) % 4], roofs[(v + 2) % 4], v + 5);
+      house(ctx, gx + 0.56, gy + 0.6, walls[(v + 2) % 4], roofs[(v + 1) % 4], v + 9);
+    },
+    park(ctx, gx, gy, v, S, t) {
+      poly(ctx, [P(gx + 0.44, gy + 0.04, 2), P(gx + 0.56, gy + 0.04, 2), P(gx + 0.56, gy + 0.96, 2), P(gx + 0.44, gy + 0.96, 2)], '#cdbf9f');
+      poly(ctx, [P(gx + 0.04, gy + 0.44, 2), P(gx + 0.96, gy + 0.44, 2), P(gx + 0.96, gy + 0.56, 2), P(gx + 0.04, gy + 0.56, 2)], '#cdbf9f');
+      tree(ctx, gx + 0.2, gy + 0.2, 0.8); tree(ctx, gx + 0.8, gy + 0.22, 0.7);
+      const c = P(gx + 0.5, gy + 0.5, 2);
+      if (v % 4 === 0) { ellipse(ctx, c[0], c[1], 17, 8.5, '#8fa3ad'); ellipse(ctx, c[0], c[1], 14.5, 7.2, '#4fb4d8'); ellipse(ctx, c[0] - 4, c[1] - 2, 4, 1.6, '#bfe8f7'); }
+      else if (v % 4 === 1) { ellipse(ctx, c[0], c[1], 13, 6.5, '#cdbf9f'); box(ctx, gx + 0.44, gy + 0.44, 0.12, 0.12, 2, 9, '#d9d3c4'); ellipse(ctx, c[0], c[1] - 12, 5, 5, '#6fae9a'); }
+      else if (v % 4 === 2) {
+        ellipse(ctx, c[0], c[1], 15, 7.5, '#d8c79a');
+        ctx.strokeStyle = '#e4572e'; ctx.lineWidth = 1.3; const a = P(gx + 0.4, gy + 0.5, 2), b = P(gx + 0.6, gy + 0.5, 2);
+        ctx.beginPath(); ctx.moveTo(a[0] - 3, a[1]); ctx.lineTo(a[0], a[1] - 13); ctx.lineTo(b[0], b[1] - 13); ctx.lineTo(b[0] + 3, b[1]); ctx.stroke();
+        const sw = Math.sin(t * 0.3) * 2; ctx.strokeStyle = '#d7dbe0'; ctx.lineWidth = 0.8;
+        [0.35, 0.65].forEach((f) => { const sx = a[0] + (b[0] - a[0]) * f, sy = a[1] + (b[1] - a[1]) * f - 13; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + sw, sy + 9); ctx.stroke(); ctx.fillStyle = '#f2b33d'; ctx.fillRect(sx + sw - 1.5, sy + 9, 3, 1.5); });
+      } else { ellipse(ctx, c[0], c[1], 12, 6, '#8fa3ad'); ellipse(ctx, c[0], c[1], 9.5, 4.8, '#4fb4d8'); ctx.fillStyle = '#d5f1fb'; ctx.fillRect(c[0] - 0.8, c[1] - 9 - Math.abs(Math.sin(t * 0.3)) * 2, 1.6, 9); }
+      bench(ctx, gx + 0.3, gy + 0.6); bench(ctx, gx + 0.62, gy + 0.36);
+      tree(ctx, gx + 0.2, gy + 0.82, 0.75); tree(ctx, gx + 0.82, gy + 0.8, 0.85);
+    },
+    firehouse(ctx, gx, gy, v, S, t, face) {
+      const x = gx + 0.16, y = gy + 0.2, w = 0.66, d = 0.58;
+      box(ctx, x, y, w, d, 2, 24, '#b5483c');
+      [0.08, 0.54].forEach((u) => { wallRect(ctx, face, x, y, w, d, 2, u, u + 0.38, 0, 13, face === 'L' ? '#eef1f4' : '#c9ced6'); for (let r = 1; r < 4; r++) wallRect(ctx, face, x, y, w, d, 2, u, u + 0.38, r * 3.2, r * 3.2 + 0.6, '#8a95a3'); });
+      const other = face === 'L' ? 'R' : 'L';
+      for (let c = 0; c < 3; c++) wallRect(ctx, other, x, y, w, d, 2, (c + 0.25) / 3, (c + 0.75) / 3, 15, 21, other === 'L' ? C.lit : shade(C.lit, -0.18));
+      for (let c = 0; c < 3; c++) wallRect(ctx, face, x, y, w, d, 2, (c + 0.25) / 3, (c + 0.75) / 3, 16, 21, face === 'L' ? C.lit : shade(C.lit, -0.18));
+      box(ctx, x - 0.02, y - 0.02, w + 0.04, d + 0.04, 26, 2, '#e6dfcc');
+      box(ctx, x + 0.06, y + 0.06, 0.16, 0.16, 28, 14, '#b5483c'); box(ctx, x + 0.04, y + 0.04, 0.2, 0.2, 42, 2, '#e6dfcc');
+    },
+    school(ctx, gx, gy, v, S, t, face) {
+      const x = gx + 0.1, y = gy + 0.24, w = 0.8, d = 0.5;
+      box(ctx, x, y, w, d, 2, 19, '#d9b56a');
+      windows(ctx, x, y, w, d, 2, 19, { rows: 2, cols: 6, seed: 77, base: 3, cap: 3, litRate: 0.45, lit: '#fff0c4' });
+      wallRect(ctx, face, x, y, w, d, 2, 0.43, 0.57, 0, 9, '#5a4030');
+      box(ctx, x - 0.02, y - 0.02, w + 0.04, d + 0.04, 21, 2, '#8a4b3a');
+      box(ctx, x + 0.34, y + 0.18, 0.12, 0.12, 23, 8, '#e6dfcc'); gable(ctx, x + 0.32, y + 0.16, 0.16, 0.16, 31, 5, '#8a4b3a', '#e6dfcc');
+      tree(ctx, gx + 0.14, gy + 0.9, 0.6); tree(ctx, gx + 0.9, gy + 0.14, 0.6);
+    },
+    market(ctx, gx, gy, v, S) {
+      box(ctx, gx + 0.06, gy + 0.06, 0.88, 0.88, 2, 0.8, '#cbbfa6');
+      [[0.12, 0.14, S.color], [0.56, 0.14, '#f2b33d'], [0.12, 0.6, '#3aa88f'], [0.56, 0.6, '#4f8fd9']].forEach(([a, b, col]) => {
+        box(ctx, gx + a, gy + b, 0.3, 0.2, 3, 8, '#e9dcc0'); awning(ctx, gx + a - 0.03, gy + b - 0.02, 0.36, 0.3, 11, col, C.white, 4);
+      });
+      tree(ctx, gx + 0.5, gy + 0.5, 0.6);
+    },
+  };
+  // Scenery layout on the border of a 9x9 block around the district. [row, col, kind, variant]; back rows carry the skyline.
+  const TOWN_PLAN = [
+    [0, 0, 'office', 0], [0, 1, 'apartments', 0], [0, 2, 'library', 0], [0, 3, 'office', 1], [0, 4, 'cityhall', 0], [0, 5, 'office', 2], [0, 6, 'diner', 0], [0, 7, 'apartments', 1], [0, 8, 'park', 0],
+    [1, 0, 'office', 3], [2, 0, 'firehouse', 0], [3, 0, 'apartments', 2], [4, 0, 'school', 0], [5, 0, 'office', 5], [6, 0, 'cafe', 0], [7, 0, 'houses', 0], [8, 0, 'park', 1],
+    [8, 1, 'houses', 1], [8, 2, 'park', 2], [8, 3, 'diner', 1], [8, 4, 'houses', 2], [8, 5, 'market', 0], [8, 6, 'cafe', 1], [8, 7, 'houses', 3], [8, 8, 'park', 3],
+    [1, 8, 'cafe', 2], [2, 8, 'houses', 5], [3, 8, 'park', 6], [4, 8, 'market', 1], [5, 8, 'houses', 6], [6, 8, 'diner', 2], [7, 8, 'park', 5],
+  ].sort((a, b) => a[0] + a[1] - b[0] - b[1]);
+
+  R.drawTown = function (ctx, back) {
+    TOWN_PLAN.forEach(([i, j, kind, v]) => {
+      if ((i === 0 || j === 0) !== back) return;
+      const gx = j - 2, gy = i - 2, green = kind === 'park' || kind === 'houses';
+      box(ctx, gx + 0.04, gy + 0.04, 0.92, 0.92, 0, 2, green ? '#4a8a62' : C.walk, green ? { top: '#4a8a62', left: '#3a7350', right: '#2c5a40' } : null);
+      TOWN[kind](ctx, gx, gy, v, this.state, this.t, i === 0 || i === 8 ? 'L' : 'R');
+    });
+  };
+
+  R.drawGround = function (ctx) {
+    const lo = -E, hi = G + E, depth = 46;
+    const A = P(lo, lo), B = P(hi, lo), Cc = P(hi, hi), D = P(lo, hi);
+    const gl = ctx.createLinearGradient(0, D[1], 0, Cc[1] + depth);
+    gl.addColorStop(0, tone('#7a5642')); gl.addColorStop(1, tone('#3d2a22'));
+    poly(ctx, [D, Cc, [Cc[0], Cc[1] + depth], [D[0], D[1] + depth]], gl);
+    const gr = ctx.createLinearGradient(0, B[1], 0, Cc[1] + depth);
+    gr.addColorStop(0, tone('#5d4032')); gr.addColorStop(1, tone('#2b1d18'));
+    poly(ctx, [Cc, B, [B[0], B[1] + depth], [Cc[0], Cc[1] + depth]], gr);
+    poly(ctx, [D, Cc, [Cc[0], Cc[1] + 5], [D[0], D[1] + 5]], '#356b4d');
+    poly(ctx, [Cc, B, [B[0], B[1] + 5], [Cc[0], Cc[1] + 5]], '#28543c');
+    poly(ctx, [A, B, Cc, D], C.grass);
+    const sq = (a, b, fill, stroke) => poly(ctx, [P(a, a), P(b, a), P(b, b), P(a, b)], fill, stroke);
+    sq(-2.04, G + 2.04, '#39745a');          // town blocks sit on slightly darker turf
+    sq(-1.0, G + 1.0, C.walk);               // outer sidewalk
+    sq(-0.84, G + 0.84, C.asphalt);          // ring road
+    sq(-0.2, G + 0.2, C.walk);               // district sidewalk
+    sq(-0.07, G + 0.07, '#262d38');          // district streets
+    ctx.save(); ctx.setLineDash([7, 7]); ctx.globalAlpha = 0.7;
+    sq(-0.52, G + 0.52, null, C.line);
+    ctx.restore();
+    // crosswalks at the middle of each side
+    const zebra = 'rgba(238,241,244,.8)';
+    for (let k = 0; k < 5; k++) {
+      const a = 2.28 + k * 0.1;
+      poly(ctx, [P(a, -0.82), P(a + 0.05, -0.82), P(a + 0.05, -0.22), P(a, -0.22)], zebra);
+      poly(ctx, [P(a, G + 0.22), P(a + 0.05, G + 0.22), P(a + 0.05, G + 0.82), P(a, G + 0.82)], zebra);
+      poly(ctx, [P(-0.82, a), P(-0.22, a), P(-0.22, a + 0.05), P(-0.82, a + 0.05)], zebra);
+      poly(ctx, [P(G + 0.22, a), P(G + 0.82, a), P(G + 0.82, a + 0.05), P(G + 0.22, a + 0.05)], zebra);
+    }
+  };
+
+  /** A point on a square loop around the district. m0 = offset of the back edge, u in [0,4): one unit per side. */
+  function loopPos(u, m0) {
+    const L = G - 2 * m0, s = Math.floor(u) % 4, f = u - Math.floor(u);
+    if (s === 0) return { x: m0 + f * L, y: m0, along: 'x', back: true };
+    if (s === 1) return { x: m0 + L, y: m0 + f * L, along: 'y', back: false };
+    if (s === 2) return { x: m0 + L - f * L, y: m0 + L, along: 'x', back: false };
+    return { x: m0, y: m0 + L - f * L, along: 'y', back: true };
+  }
+
+  R.draw = function () {
+    const ctx = this.ctx, S = this.state, t = this.t;
+    NIGHT = !!this.night; FLOOD = false;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    if (!S) return;
+    ctx.setTransform(this.dpr * this.scale, 0, 0, this.dpr * this.scale, this.dpr * this.ox, this.dpr * this.oy);
+    this.drawGround(ctx);
+    // moving things, each tagged with the layer it belongs to
+    const cars = [], palette = ['#e4572e', '#f2b33d', '#e8e2d0', '#4f8fd9', '#3aa88f', '#b06ab3'];
+    for (let i = 0; i < 9; i++) cars.push(Object.assign(loopPos((i * 0.447 + t * (0.004 + (i % 3) * 0.0012)) % 4, -0.52), { col: palette[i % palette.length] }));
+    const walkers = [];
+    for (let i = 0; i < 44; i++) {
+      const outer = i % 3 !== 0, dir = i % 2 ? 1 : -1, sp = 0.0009 + hash(i, 7) * 0.0009;
+      const u = (((hash(i, 3) * 4 + dir * t * sp) % 4) + 4) % 4;
+      const lane = outer ? -0.92 + (i % 4) * 0.02 - 0.03 : -0.135 + (i % 2) * 0.03;
+      walkers.push(Object.assign(loopPos(u, lane), { i, outer }));
+    }
+    const lamps = [];
+    for (let s = 0; s < 4; s++) for (let k = 0; k < 5; k++) lamps.push(loopPos(s + (k + 0.5) / 5, -0.97));
+    const rim = [];
+    for (let i = 0; i < 40; i++) {
+      const side = i % 4, f = hash(i, 9) * (G + 2 * E - 0.3) - E + 0.15, off = E - 0.11;
+      const p = side === 0 ? [f, -off] : side === 1 ? [G + off, f] : side === 2 ? [f, G + off] : [-off, f];
+      rim.push({ x: p[0], y: p[1], s: 0.45 + hash(i, 2) * 0.3, back: side === 0 || side === 3 });
+    }
+    rim.sort((p, q) => p.x + p.y - q.x - q.y);
+    const byDepth = (p, q) => p.x + p.y - q.x - q.y;
+
+    rim.filter((p) => p.back).forEach((p) => tree(ctx, p.x, p.y, p.s));
+    this.drawTown(ctx, true);
+    lamps.filter((p) => p.back).forEach((p) => lamp(ctx, p.x, p.y));
+    walkers.filter((p) => p.back).sort(byDepth).forEach((p) => person(ctx, p.x, p.y, p.i, t));
+    cars.filter((c) => c.back).forEach((c) => car(ctx, c.x, c.y, c.along, c.col));
+    // lots back to front; the stadium sits at depth 4, in front of the back rows and behind the front rows
+    const order = [];
+    for (let r = 0; r < G; r++) for (let c = 0; c < G; c++) if (!FT.isStadium(r + '-' + c)) order.push([r, c]);
+    order.sort((p, q) => p[0] + p[1] - q[0] - q[1] || p[1] - q[1]);
+    let stadiumDone = false;
+    order.forEach(([r, c]) => {
+      if (!stadiumDone && r + c > 3) { FLOOD = NIGHT; this.drawStadium(ctx); FLOOD = false; stadiumDone = true; } // floodlit at night
+      this.drawLot(ctx, r, c);
+    });
+    walkers.filter((p) => !p.back && !p.outer).sort(byDepth).forEach((p) => person(ctx, p.x, p.y, p.i, t));
+    cars.filter((c) => !c.back).forEach((c) => car(ctx, c.x, c.y, c.along, c.col));
+    walkers.filter((p) => !p.back && p.outer).sort(byDepth).forEach((p) => person(ctx, p.x, p.y, p.i, t));
+    lamps.filter((p) => !p.back).forEach((p) => lamp(ctx, p.x, p.y));
+    this.drawTown(ctx, false);
+    rim.filter((p) => !p.back).forEach((p) => tree(ctx, p.x, p.y, p.s));
+    // fireworks
+    this.particles = this.particles.filter((p) => p.life > 0);
+    FLOOD = true;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    this.particles.forEach((p) => {
+      p.x += p.vx; p.y += p.vy; p.vy += 0.05; p.life -= 1;
+      ctx.globalAlpha = Math.max(0, p.life / 40); ctx.fillStyle = p.col; ctx.fillRect(p.x - 1.2, p.y - 1.2, 2.4, 2.4);
+    });
+    ctx.restore();
+  };
+
+  R.fireworks = function (n) {
+    const cols = [this.state.color, '#ffd685', '#ffffff', '#7fd4ff'];
+    for (let b = 0; b < (n || 5); b++) {
+      const x = -220 + Math.random() * 440, y = -150 + Math.random() * 110, col = cols[b % cols.length];
+      setTimeout(() => {
+        for (let i = 0; i < 46; i++) { const an = Math.random() * 6.283, sp = 0.6 + Math.random() * 2.6; this.particles.push({ x, y, vx: Math.cos(an) * sp, vy: Math.sin(an) * sp - 0.6, life: 30 + Math.random() * 22, col }); }
+      }, b * 260);
+    }
+  };
+
+  R.start = function () {
+    const still = root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let last = 0;
+    const loop = (now) => {
+      this.raf = root.requestAnimationFrame(loop);
+      if (now - last < (still ? 400 : 40)) return;
+      last = now;
+      if (!still) this.t += 1;
+      this.draw();
+    };
+    this.raf = root.requestAnimationFrame(loop);
+  };
+
+  /** Draw one building (or the stadium, type 'stadium') on its own canvas. Used by the gallery page. */
+  FT.drawPreview = function (canvas, type, level, color, night) {
+    const dpr = Math.min(2, root.devicePixelRatio || 1), w = canvas.clientWidth || 220, h = canvas.clientHeight || 180;
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    const ctx = canvas.getContext('2d');
+    if (!canvas.toneHooked) { hookTone(ctx); canvas.toneHooked = true; }
+    NIGHT = !!night; FLOOD = false;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const S = { color, stadium: level, grid: {} }, fake = { state: S, t: 12, fill: 0.85, score: '27-24', selected: null, hover: null, gameDay: false };
+    if (type === 'stadium') {
+      const sc = Math.min(w / 250, h / 190);
+      ctx.setTransform(dpr * sc, 0, 0, dpr * sc, dpr * w / 2, dpr * (h / 2 - 96 * sc));
+      FLOOD = NIGHT;
+      R.drawStadium.call(fake, ctx);
+    } else {
+      const tall = heightOf({ type, level });
+      const sc = Math.min(2.1, w / 135, (h - 16) / (tall + 72));
+      ctx.setTransform(dpr * sc, 0, 0, dpr * sc, dpr * w / 2, dpr * (h - 8 - 62 * sc));
+      box(ctx, 0.06, 0.06, 0.88, 0.88, 0, 2, C.walk);
+      DRAW[type](ctx, 0, 0, level, S, fake.t, fake);
+    }
+    FLOOD = false;
+  };
+
+  FT.Renderer = Renderer;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>
+/* Franchise Tycoon — gallery page. Lists every building level with the game's own art and numbers. */
+(function () {
+  'use strict';
+  const FT = window.FT;
+  const COLORS = ['#e4572e', '#f2b33d', '#3aa88f', '#4f8fd9', '#b06ab3', '#d9436b', '#5aa845', '#d8d2c2'];
+  let color = COLORS[0], night = false;
+  const money = (n) => '$' + (n >= 1e6 ? (n / 1e6).toFixed(n % 1e6 ? 2 : 0) + 'M' : Math.round(n / 1e3) + 'k');
+  const card = (type, lv, title, lines, wide) => '<div class="lv' + (wide ? ' wide' : '') + '"><canvas data-type="' + type + '" data-lv="' + lv + '" role="img" aria-label="' + title + '"></canvas><div><b>' + title + '</b>' + lines.map((l, i) => (i ? '<span>' : '<em>') + l + (i ? '</span>' : '</em>')).join('') + '</div></div>';
+
+  let h = '<section><h2>Stadium</h2><p>The centre of the district. Each expansion adds seats, and from level 2 up, floodlight towers and then a canopy over the far stands.</p><div class="levels">';
+  FT.STADIUM.name.forEach((name, i) => { h += card('stadium', i + 1, 'Level ' + (i + 1) + ' · ' + name, [i ? money(FT.STADIUM.cost[i]) + ' to expand' : 'Where you start', FT.STADIUM.cap[i].toLocaleString() + ' seats'], true); });
+  h += '</div></section>';
+  FT.TYPES.forEach((t) => {
+    const b = FT.BUILDINGS[t];
+    h += '<section><h2>' + b.name + '</h2><p>' + b.blurb + '</p><p class="linkline">' + b.link + '</p><div class="levels">';
+    b.cost.forEach((c, i) => { h += card(t, i + 1, 'Level ' + (i + 1), [money(c) + (i ? ' to upgrade' : ' to build'), b.unit(b.v[i]), i === 0 ? b.synergy : '']); });
+    h += '</div></section>';
+  });
+  document.getElementById('sections').innerHTML = h;
+  document.getElementById('sections').style.cssText = 'display:flex;flex-direction:column;gap:30px';
+  document.getElementById('colors').innerHTML = COLORS.map((c) => '<button class="swatch" style="background:' + c + '" data-color="' + c + '" aria-label="Team colour ' + c + '"></button>').join('');
+
+  function paint() {
+    document.getElementById('gal').classList.toggle('night', night);
+    document.documentElement.style.setProperty('--team', color);
+    document.getElementById('t-day').classList.toggle('on', !night);
+    document.getElementById('t-night').classList.toggle('on', night);
+    document.querySelectorAll('.swatch').forEach((s) => s.classList.toggle('on', s.dataset.color === color));
+    document.querySelectorAll('canvas[data-type]').forEach((c) => FT.drawPreview(c, c.dataset.type, +c.dataset.lv, color, night));
+  }
+  document.addEventListener('click', (e) => {
+    const n = e.target.closest('[data-night]'), c = e.target.closest('[data-color]');
+    if (n) night = n.dataset.night === '1';
+    if (c) color = c.dataset.color;
+    if (n || c) paint();
+  });
+  window.addEventListener('resize', paint);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(paint);
+  paint();
+})();
+</script>

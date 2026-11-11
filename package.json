@@ -1,0 +1,14 @@
+{
+  "name": "franchise-tycoon",
+  "version": "1.0.0",
+  "private": true,
+  "engines": { "node": ">=18" },
+  "description": "A stadium-district sim driven by your Sleeper fantasy football results.",
+  "scripts": {
+    "build": "node build.js",
+    "start": "node build.js && node server.js",
+    "test": "node test/sim.js && node test/sleeper-mock.js && node test/league.js",
+    "test:browser": "node build.js && node test/flow.js && node test/league-browser.js",
+    "shots": "node build.js && node test/shot.js"
+  }
+}

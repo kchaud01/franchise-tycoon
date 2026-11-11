@@ -1,0 +1,40 @@
+/* Franchise Tycoon — gallery page. Lists every building level with the game's own art and numbers. */
+(function () {
+  'use strict';
+  const FT = window.FT;
+  const COLORS = ['#e4572e', '#f2b33d', '#3aa88f', '#4f8fd9', '#b06ab3', '#d9436b', '#5aa845', '#d8d2c2'];
+  let color = COLORS[0], night = false;
+  const money = (n) => '$' + (n >= 1e6 ? (n / 1e6).toFixed(n % 1e6 ? 2 : 0) + 'M' : Math.round(n / 1e3) + 'k');
+  const card = (type, lv, title, lines, wide) => '<div class="lv' + (wide ? ' wide' : '') + '"><canvas data-type="' + type + '" data-lv="' + lv + '" role="img" aria-label="' + title + '"></canvas><div><b>' + title + '</b>' + lines.map((l, i) => (i ? '<span>' : '<em>') + l + (i ? '</span>' : '</em>')).join('') + '</div></div>';
+
+  let h = '<section><h2>Stadium</h2><p>The centre of the district. Each expansion adds seats, and from level 2 up, floodlight towers and then a canopy over the far stands.</p><div class="levels">';
+  FT.STADIUM.name.forEach((name, i) => { h += card('stadium', i + 1, 'Level ' + (i + 1) + ' · ' + name, [i ? money(FT.STADIUM.cost[i]) + ' to expand' : 'Where you start', FT.STADIUM.cap[i].toLocaleString() + ' seats'], true); });
+  h += '</div></section>';
+  FT.TYPES.forEach((t) => {
+    const b = FT.BUILDINGS[t];
+    h += '<section><h2>' + b.name + '</h2><p>' + b.blurb + '</p><p class="linkline">' + b.link + '</p><div class="levels">';
+    b.cost.forEach((c, i) => { h += card(t, i + 1, 'Level ' + (i + 1), [money(c) + (i ? ' to upgrade' : ' to build'), b.unit(b.v[i]), i === 0 ? b.synergy : '']); });
+    h += '</div></section>';
+  });
+  document.getElementById('sections').innerHTML = h;
+  document.getElementById('sections').style.cssText = 'display:flex;flex-direction:column;gap:30px';
+  document.getElementById('colors').innerHTML = COLORS.map((c) => '<button class="swatch" style="background:' + c + '" data-color="' + c + '" aria-label="Team colour ' + c + '"></button>').join('');
+
+  function paint() {
+    document.getElementById('gal').classList.toggle('night', night);
+    document.documentElement.style.setProperty('--team', color);
+    document.getElementById('t-day').classList.toggle('on', !night);
+    document.getElementById('t-night').classList.toggle('on', night);
+    document.querySelectorAll('.swatch').forEach((s) => s.classList.toggle('on', s.dataset.color === color));
+    document.querySelectorAll('canvas[data-type]').forEach((c) => FT.drawPreview(c, c.dataset.type, +c.dataset.lv, color, night));
+  }
+  document.addEventListener('click', (e) => {
+    const n = e.target.closest('[data-night]'), c = e.target.closest('[data-color]');
+    if (n) night = n.dataset.night === '1';
+    if (c) color = c.dataset.color;
+    if (n || c) paint();
+  });
+  window.addEventListener('resize', paint);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(paint);
+  paint();
+})();

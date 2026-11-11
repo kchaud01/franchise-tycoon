@@ -1,0 +1,54 @@
+<div class="app">
+  <section id="setup" class="setup">
+    <div class="setup-card">
+      <p class="kicker">A fantasy football companion</p>
+      <h1>Franchise Tycoon</h1>
+      <div class="setup-body"></div>
+    </div>
+  </section>
+
+  <div id="game" class="game" hidden>
+    <header class="hud">
+      <div class="brand">
+        <b id="hud-name"></b>
+        <span id="hud-league"></span>
+      </div>
+      <div id="hud-stats" class="stats"></div>
+      <div class="hud-actions">
+        <button class="btn ghost small" data-act="sync" id="btn-sync">Sync</button>
+        <button class="btn ghost small" data-act="menu" id="btn-menu" aria-haspopup="true">Menu</button>
+        <div id="menu" class="menu" hidden>
+          <button data-act="switchleague" id="btn-switch">Switch league</button>
+          <button data-act="reset" id="btn-reset">Start over</button>
+          <button data-act="leave" id="btn-leave" hidden>Leave league mode on this device</button>
+        </div>
+      </div>
+    </header>
+    <main>
+      <section class="board" aria-label="Stadium district">
+        <canvas id="city" aria-label="Isometric map of your stadium district. Use the Build tab to manage lots."></canvas>
+        <div id="visit" class="visit" hidden></div>
+        <div class="zoom" role="group" aria-label="Map zoom">
+          <button data-act="zoomin" id="btn-zoomin" aria-label="Zoom in">+</button>
+          <button data-act="zoomout" id="btn-zoomout" aria-label="Zoom out">&minus;</button>
+          <button data-act="zoomreset" id="btn-zoomreset" aria-label="Reset view">Fit</button>
+        </div>
+      </section>
+      <aside class="side">
+        <nav class="tabs" role="tablist">
+          <button role="tab" data-act="tab" data-v="game" id="tab-game">Game Day</button>
+          <button role="tab" data-act="tab" data-v="build" id="tab-build">Build</button>
+          <button role="tab" data-act="tab" data-v="league" id="tab-league">League</button>
+          <button role="tab" data-act="tab" data-v="ledger" id="tab-ledger">Ledger</button>
+          <button role="tab" data-act="tab" data-v="bonus" id="tab-bonus" hidden>Bonus</button>
+          <button role="tab" data-act="tab" data-v="admin" id="tab-admin" hidden>Admin</button>
+        </nav>
+        <div id="panel" class="panel"></div>
+      </aside>
+    </main>
+  </div>
+
+  <div id="modal" class="modal" hidden role="dialog" aria-modal="true" aria-label="Game day report">
+    <div id="modal-body" class="modal-body"></div>
+  </div>
+</div>

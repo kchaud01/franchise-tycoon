@@ -1,0 +1,45 @@
+<title>Franchise Tycoon Gallery</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+/*STYLE*/
+html, body { height: auto; }
+.gal { max-width: 1120px; margin: 0 auto; padding-block: 28px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 30px; }
+.gal header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px; }
+.gal h1 { font-size: clamp(38px, 8vw, 58px); font-weight: 700; text-transform: uppercase; }
+.gal header p { color: var(--muted); max-width: 60ch; }
+.controls { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+.toggle { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.toggle button { background: none; border: 0; padding: 7px 14px; font: 600 15px var(--display); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.toggle button.on { background: var(--team); color: #fff; }
+.gal section { display: flex; flex-direction: column; gap: 10px; }
+.gal section > h2 { font-size: 28px; font-weight: 700; text-transform: uppercase; border-left: 4px solid var(--team); padding-left: 10px; }
+.gal section > p { color: var(--muted); max-width: 75ch; }
+.gal section > p.linkline { color: var(--gold); }
+.levels { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.lv { background: var(--raise); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+.lv canvas { width: 100%; height: 190px; display: block; background: linear-gradient(180deg, #4f97d1 0%, #8fc4e8 60%, #cfe2dc 100%); }
+.night .lv canvas { background: linear-gradient(180deg, #111830 0%, #262b55 55%, #5e466c 100%); }
+.lv.wide canvas { height: 210px; }
+.lv div { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 2px; }
+.lv b { font: 600 18px/1.1 var(--display); text-transform: uppercase; letter-spacing: .03em; }
+.lv span { font-size: 13px; color: var(--muted); }
+.lv em { font: 600 15px var(--display); font-style: normal; color: var(--gold); }
+</style>
+<div class="gal" id="gal">
+  <header>
+    <div>
+      <p class="kicker">Franchise Tycoon</p>
+      <h1>Building gallery</h1>
+      <p>Every building at each of its three levels, and the stadium at all five. These are drawn by the game itself, so this is exactly what appears in your district.</p>
+    </div>
+    <div class="controls">
+      <div class="toggle" role="group" aria-label="Time of day">
+        <button id="t-day" data-night="0">Afternoon</button>
+        <button id="t-night" data-night="1">Night game</button>
+      </div>
+      <div class="swatches" id="colors" role="group" aria-label="Team colour"></div>
+    </div>
+  </header>
+  <div id="sections"></div>
+</div>
