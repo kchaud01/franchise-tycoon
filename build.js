@@ -8,7 +8,7 @@ const src = (f) => fs.readFileSync(path.join(__dirname, 'src', f), 'utf8');
 const head = '<title>Franchise Tycoon</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n' +
   '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap">\n' +
   '<style>\n' + src('style.css') + '</style>\n';
-const scripts = ['engine.js', 'league.js', 'render.js', 'app.js'].map((f) => '<script>\n' + src(f) + '</script>').join('\n');
+const scripts = ['engine.js', 'league.js', 'render.js', 'minigames.js', 'app.js'].map((f) => '<script>\n' + src(f) + '</script>').join('\n');
 const content = head + src('body.html') + scripts + '\n';
 
 fs.mkdirSync(path.join(__dirname, 'dist'), { recursive: true });

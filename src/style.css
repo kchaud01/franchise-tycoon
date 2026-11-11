@@ -187,6 +187,27 @@ tr.me td:first-child { box-shadow: inset 3px 0 0 var(--team); }
 .adj p { grid-column: 1 / -1; color: var(--gold); font-size: 13px; }
 .adj.flip b { color: var(--gold); }
 
+/* mini-games */
+.mini { z-index: 30; }
+.mini-body { width: min(100%, 420px); }
+.mini-title { font-size: 34px; font-weight: 700; text-transform: uppercase; }
+.mini-body canvas { width: 100%; max-width: 360px; aspect-ratio: 360 / 440; align-self: center; border-radius: 8px; border: 1px solid var(--line); touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer; background: var(--ink); }
+.mini-foot { display: flex; flex-direction: column; gap: 8px; }
+.mini-result { display: flex; flex-direction: column; gap: 2px; background: var(--raise); border-radius: 8px; padding: 10px 12px; }
+.mini-result b { font: 700 30px/1.1 var(--display); background: none; padding: 0; }
+.mini-result span { color: var(--gold); font-size: 14px; }
+.medal { font: 700 12px var(--display); font-style: normal; text-transform: uppercase; letter-spacing: .1em; border-radius: 3px; padding: 1px 6px; color: var(--ink); background: var(--muted); vertical-align: middle; }
+.medal.m1 { background: #c98a5a; } .medal.m2 { background: #cfd6dd; } .medal.m3 { background: var(--gold); }
+.mini-result b.medal { color: var(--text); background: none; padding: 0; font-size: 30px; letter-spacing: 0; }
+.mini-result b.m1 { color: #dda06f; } .mini-result b.m2 { color: #dfe5ea; } .mini-result b.m3 { color: var(--gold); }
+.minih { color: var(--text) !important; font-size: 20px !important; letter-spacing: .03em !important; }
+.minis { display: flex; flex-direction: column; gap: 6px; }
+.minis button { background: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; text-align: left; display: grid; grid-template-columns: 1fr auto; column-gap: 10px; min-width: 0; }
+.minis button:hover { border-color: var(--muted); }
+.minis b { font: 600 17px/1.15 var(--display); text-transform: uppercase; letter-spacing: .03em; }
+.minis em { font: 600 14px var(--display); font-style: normal; color: var(--gold); }
+.minis span { grid-column: 1 / -1; font-size: 12.5px; color: var(--muted); }
+
 /* game-day report */
 .modal { position: fixed; inset: 0; background: rgba(8, 12, 20, .72); display: grid; place-items: center; z-index: 20; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
 .modal-body { width: min(100%, 560px); max-height: 100%; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-top: 4px solid var(--team); border-radius: 10px; padding: 22px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 30px 80px rgba(0,0,0,.6); }

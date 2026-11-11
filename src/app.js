@@ -181,6 +181,7 @@
         (nx.backlog > 1 ? '<p class="pill">' + nx.backlog + ' finished weeks waiting to be played</p>' : '') + '</div>';
       if (r.home) h += crowdCard(f);
       if (!r.bye) h += promoCard(r);
+      h += miniList();
       h += '<button class="btn primary big" data-act="play">' + (r.bye ? 'Play the bye week' : r.home ? 'Open the gates' : 'Play the away game') + '</button>';
     } else if (nx.status === 'done') {
       h += '<div class="card match"><div class="kicker">' + esc(L.season) + ' season</div><h2>Season complete</h2><p>Final record ' + S.wins + '-' + S.losses + ' across everything you have played. Your district carries over.</p></div>' +
@@ -207,6 +208,51 @@
     if (!LG || LG.view.phase === 'open') return html + (LG && notice ? '<p class="fine notice" role="status">' + esc(notice) + '</p>' : '');
     return '<div class="card"><p class="pill">Locked until Week ' + LG.view.week + ' settles</p><p class="fine">Building reopens for every owner at the same moment.</p></div>' + html.replace(/data-act="(build|upgrade|stadium|demolish)"/g, 'disabled data-act="$1"');
   }
+  // ---- mini-games ------------------------------------------------------------------------
+  const MEDAL_CLASS = ['', 'm1', 'm2', 'm3'];
+  function miniState(type) { return (S.mini && S.mini[type]) || { tries: 0, medal: 0, boost: 0 }; }
+  function miniOpen() { return !LG || LG.view.phase === 'open'; }
+  function miniOn() { return !LG || LG.view.settings.miniBoost !== false; }
+  function miniStatus(type) {
+    const m = miniState(type), left = FT.MINI_TRIES - m.tries, d = FT.BUILDINGS[type];
+    if (!miniOpen()) return 'The week is locked, so this is practice only.';
+    const best = m.medal ? 'Best so far: ' + FT.MEDALS[m.medal] + (miniOn() ? ', ' + d.name + ' +' + Math.round(m.boost * 100) + '% this game day.' : '.') : 'No medal yet.';
+    return (left > 0 ? left + (left === 1 ? ' try' : ' tries') + ' left this week. ' : 'No tries left this week: playing on is just for fun. ') + best;
+  }
+  function miniCard(type) {
+    const g = FT.MINI[type], m = miniState(type), left = FT.MINI_TRIES - m.tries, t = g.tiers;
+    return '<div class="card minicard"><div class="kicker">Mini-game</div><h3 class="minih">' + esc(g.name) + (m.medal ? ' <i class="medal ' + MEDAL_CLASS[m.medal] + '">' + FT.MEDALS[m.medal] + '</i>' : '') + '</h3><p class="fine">' + esc(g.how) + '</p>' +
+      '<p class="fine">Bronze ' + t[0] + ', silver ' + t[1] + ', gold ' + t[2] + ' ' + g.unit + (g.lower ? ' or faster' : '') + '. ' + (miniOn() ? 'A medal lifts this building by 4%, 7% or 10% for the next game day.' : 'Your commissioner has medals set to bragging rights only.') + '</p>' +
+      '<button class="btn ' + (left > 0 && miniOpen() ? 'primary' : 'ghost') + ' wide" data-act="mini" data-v="' + type + '">' + (left > 0 && miniOpen() ? 'Play · ' + left + (left === 1 ? ' try left' : ' tries left') : 'Play for fun') + '</button></div>';
+  }
+  function miniList() {
+    const owned = FT.TYPES.filter((t) => Object.values(S.grid).some((b) => b.type === t));
+    if (!owned.length) return '';
+    return '<div class="card"><h3>Mini-games</h3><p class="fine">One per building you own. Three tries each per week; your best medal boosts that building on game day.</p><div class="minis">' + owned.map((t) => {
+      const m = miniState(t), left = FT.MINI_TRIES - m.tries;
+      return '<button data-act="mini" data-v="' + t + '"><b>' + esc(FT.MINI[t].name) + '</b><em>' + (m.medal ? '<i class="medal ' + MEDAL_CLASS[m.medal] + '">' + FT.MEDALS[m.medal] + '</i>' : left + ' left') + '</em><span>' + FT.BUILDINGS[t].name + (m.boost && miniOn() ? ' +' + Math.round(m.boost * 100) + '%' : '') + '</span></button>';
+    }).join('') + '</div></div>';
+  }
+  function playMini(type) {
+    const g = FT.MINI[type];
+    FT.Mini.open({
+      game: g.game, title: g.name, building: FT.BUILDINGS[type].name, how: g.how, color: S.color,
+      status: () => miniStatus(type),
+      onClose: () => render(),
+      onFinish: async (score) => {
+        const medal = FT.miniMedal(type, score), before = miniState(type);
+        let counted = false;
+        if (miniOpen() && before.tries < FT.MINI_TRIES) {
+          if (LG) { try { applyView(await api('act', { a: 'mini', type, score })); counted = true; } catch (e) { notice = e.message; } }
+          else { counted = FT.recordMini(S, type, score).counted; save(); }
+        }
+        const after = miniState(type);
+        const line = !counted ? FT.MEDALS[medal] + '. Practice run, nothing recorded.' : medal > before.medal ? FT.MEDALS[medal] + ' medal!' + (miniOn() ? ' ' + FT.BUILDINGS[type].name + ' +' + Math.round(after.boost * 100) + '% on the next game day.' : '') : medal ? FT.MEDALS[medal] + '. Your best this week stays ' + FT.MEDALS[after.medal] + '.' : 'No medal this time.';
+        return { score: (g.lower ? score.toFixed(2) : score) + ' ' + g.unit, medal, line, triesLeft: FT.MINI_TRIES - after.tries };
+      },
+    });
+  }
+
   function viewBuildInner() {
     if (!selected) {
       return '<div class="card"><h3>Pick a lot on the map</h3><p>Empty lots have dashed outlines. Tap one to build, tap a building to upgrade it, or tap the stadium to expand it.</p></div>' +
@@ -224,7 +270,7 @@
         '<dl class="facts"><div><dt>Now</dt><dd>' + d.unit(d.v[b.level - 1]) + '</dd></div>' + (max ? '' : '<div><dt>Level ' + (b.level + 1) + '</dt><dd>' + d.unit(d.v[b.level]) + '</dd></div>') +
         '<div><dt>Placement</dt><dd class="' + (syn > 1 ? 'good' : '') + '">' + (syn > 1 ? '+' + Math.round((syn - 1) * 100) + '% bonus active' : d.synergy) + '</dd></div></dl>' +
         (max ? '<p class="pill">Fully upgraded</p>' : '<button class="btn primary wide" data-act="upgrade"' + (S.cash < cost ? ' disabled' : '') + '>Upgrade for ' + money(cost) + '</button>') +
-        '<button class="btn ghost wide" data-act="demolish">' + (setup.confirm === selected ? 'Tap again to demolish' : 'Demolish, refund ' + money(FT.refund(b))) + '</button></div>';
+        '<button class="btn ghost wide" data-act="demolish">' + (setup.confirm === selected ? 'Tap again to demolish' : 'Demolish, refund ' + money(FT.refund(b))) + '</button></div>' + miniCard(b.type);
     }
     return '<div class="card"><div class="kicker">' + pos + '</div><h2>Empty lot</h2><div class="options">' + FT.TYPES.map((t) => {
       const d = FT.BUILDINGS[t], syn = FT.synergy(S, selected, t), off = S.cash < d.cost[0];
@@ -272,6 +318,7 @@
     if (r.top) chips.push((top ? top.n : 'Top starter') + ' ' + r.top.pts.toFixed(1) + ' pts');
     if (r.stars) chips.push(r.stars + ' starter' + (r.stars > 1 ? 's' : '') + ' at 20+');
     if (r.trade) chips.push('Trade: ' + (r.trade.net >= 0 ? '+' : '') + r.trade.net.toFixed(1) + ' star power');
+    Object.keys(rep.mini || {}).forEach((t) => { const m = rep.mini[t]; if (m.boost) chips.push(FT.MINI[t].name + ' ' + FT.MEDALS[m.medal].toLowerCase() + ': ' + FT.BUILDINGS[t].name + ' +' + Math.round(m.boost * 100) + '%'); });
     if (r.busts) chips.push(r.busts + ' bust' + (r.busts > 1 ? 's' : ''));
     let h = '<div class="kicker">Week ' + r.week + (r.playoff ? ' · Playoffs' : '') + ' · ' + (r.bye ? 'Bye' : r.home ? 'Home' : 'Away') + (r.night && !r.bye ? ' · Night game' : '') + ' · Final</div>';
     h += r.bye ? '<h2 class="final">Bye week</h2>' :
@@ -429,6 +476,7 @@
         (m.night && !m.bye ? '<p class="linkline">Prime-time night game: broadcast rights pay +25%' + (m.home ? ' and concessions +10%.' : '.') + '</p>' : '') + '</div>';
       if (m.home) h += crowdCard(f);
       if (!m.bye) h += promoCard(m);
+      h += miniList();
       h += '<p class="fine notice">Saved to the league server as you go. There is nothing to submit.</p>';
     } else {
       h += '<div class="live"><div><span>' + esc(S.name) + '</span><b>' + m.pts.toFixed(1) + '</b></div><div><span>' + esc(m.oppName) + '</span><b>' + (m.bye ? '-' : m.oppPts.toFixed(1)) + '</b></div></div>' +
@@ -484,13 +532,14 @@
       '<div class="field"><label for="set-payout">Who earns bonus points</label><select id="set-payout">' + opt('all', 'Sliding scale: everyone above last place', s.payout) + opt('half', 'Sliding scale: top half only', s.payout) + opt('top3', 'Sliding scale: top three only', s.payout) + '</select></div>' +
       '<div class="pair"><div class="field"><label for="set-pstart">Playoffs start</label><select id="set-pstart">' + weeksOpt(10, 18, s.playoffStart) + '</select></div>' +
       '<div class="field"><label for="set-last">Last week of the season</label><select id="set-last">' + weeksOpt(12, 18, s.lastWeek) + '</select></div></div>' +
+      '<label class="check"><input type="checkbox" id="set-mini"' + (s.miniBoost === false ? '' : ' checked') + '> Mini-game medals boost buildings (scores come from each owner\'s own browser)</label>' +
       '<label class="check"><input type="checkbox" id="set-pbonus"' + (s.playoffBonus ? ' checked' : '') + '> Award bonus points during the playoffs</label>' +
       '<div class="pair"><div class="field"><label for="set-lday">Decisions lock on</label><select id="set-lday">' + DAYS.map((d, i) => opt(i, d, s.lockDay)).join('') + '</select></div>' +
       '<div class="field"><label for="set-lhour">At</label><select id="set-lhour">' + hours + '</select></div></div>' +
       (teams != null ? '<p class="fine">Teams: <b>' + teams + '</b>, read from Sleeper. Playoff and season weeks start from what Sleeper reports; change them here if your league differs.</p>' : '');
   }
   function readSettings() {
-    return { cap: +$('#set-cap').value, travelCut: +$('#set-cut').value / 100, payout: $('#set-payout').value, playoffStart: +$('#set-pstart').value, lastWeek: +$('#set-last').value, playoffBonus: $('#set-pbonus').checked, lockDay: +$('#set-lday').value, lockHour: +$('#set-lhour').value };
+    return { cap: +$('#set-cap').value, travelCut: +$('#set-cut').value / 100, payout: $('#set-payout').value, playoffStart: +$('#set-pstart').value, lastWeek: +$('#set-last').value, miniBoost: $('#set-mini').checked, playoffBonus: $('#set-pbonus').checked, lockDay: +$('#set-lday').value, lockHour: +$('#set-lhour').value };
   }
   function viewAdmin() {
     const V = LG.view, base = location.origin + location.pathname + '#';
@@ -535,6 +584,7 @@
     demolish() { if (setup.confirm === selected) { setup.confirm = null; if (LG) return lact({ a: 'demolish', k: selected }); FT.demolish(S, selected); save(); } else setup.confirm = selected; render(); },
     skip() { FT.setDemoWeek(L, L.demoThrough + 1); save(); render(); },
     newseason() { const seed = (L.seed || 2026) + 1; const nl = FT.demoLeague(seed, 3); nl.season = String(+L.season + 1); L = nl; S.wins = S.losses = 0; S.streak = 0; save(); render(); },
+    mini(v) { playMini(v); },
     sync() { if (LG) return refresh(true); sync(); },
     bonusweek(v) { LG.bonusWeek = +v; render(); },
     savesettings() { lact({ a: 'settings', v: readSettings() }).then(() => { if (!notice) { notice = 'Settings saved.'; render(); } }); },

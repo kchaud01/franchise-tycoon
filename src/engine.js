@@ -287,7 +287,8 @@
     let levels = 0;
     for (const k in s.grid) {
       const b = s.grid[k];
-      by[b.type].push(BUILDINGS[b.type].v[b.level - 1] * synergy(s, k, b.type));
+      const mini = (s.mini && s.mini[b.type] && s.mini[b.type].boost) || 0; // this week's mini-game medal
+      by[b.type].push(BUILDINGS[b.type].v[b.level - 1] * synergy(s, k, b.type) * (1 + mini));
       levels += b.level;
     }
     const lv = (t) => Object.values(s.grid).filter((b) => b.type === t).reduce((a, b) => a + b.level, 0);
@@ -374,6 +375,42 @@
   }
 
   // ---- Weekly settlement -------------------------------------------------------------
+  // ---- Mini-games -----------------------------------------------------------------------
+  // One arcade game per building. A medal boosts that building's output for the coming game day only.
+  // tiers = score needed for bronze, silver, gold (for `lower` games, the time to beat).
+  const MINI = {
+    concessions: { game: 'pour', name: 'Perfect Pour', unit: 'points', tiers: [8, 14, 20], how: 'Hold to pour and let go on the green line. A dead-on pour counts double, a spill counts nothing. 25 seconds.' },
+    transit: { game: 'shuttle', name: 'Shuttle Run', unit: 'fans', tiers: [10, 16, 22], how: 'Tap the left or right side (or use the arrow keys) to change lanes. Pick up fans and stay off the cones. 25 seconds.' },
+    retail: { game: 'order', name: 'Rush Order', unit: 'orders', tiers: [12, 17, 22], how: 'Tap the jersey that matches the order. A wrong jersey costs you time. 25 seconds.' },
+    suites: { game: 'stack', name: 'Sky Suite Stacker', unit: 'floors', tiers: [6, 10, 15], how: 'Tap to drop each floor. Anything hanging over the edge is cut off, and a miss ends the build.' },
+    media: { game: 'signal', name: 'Signal Lock', unit: '% locked', tiers: [40, 58, 74], how: 'Hold to raise the needle, let go to drop it. Keep it inside the moving band for 20 seconds.' },
+    fanzone: { game: 'kick', name: 'Field Goal Frenzy', unit: 'of 5', tiers: [2, 3, 5], how: 'Tap once to set your aim, again to set power. The green zone already allows for the wind. Five kicks, each one narrower.' },
+    medical: { game: 'dash', name: 'Combine Dash', unit: 'seconds', lower: true, tiers: [10, 7.5, 6], how: 'Alternate left and right taps (or arrow keys) to run 40 yards. Hitting the same side twice makes you stumble.' },
+    scouting: { game: 'scout', name: "Scout's Eye", unit: 'of 10', tiers: [5, 7, 9], how: 'Three prospects with three ratings each. Tap the one with the best total before the clock runs out. Ten rounds, each faster.' },
+  };
+  const MINI_TRIES = 3;
+  const MINI_BOOST = [0, 0.04, 0.07, 0.1];
+  const MEDALS = ['No medal', 'Bronze', 'Silver', 'Gold'];
+  /** 0 = no medal, 1 = bronze, 2 = silver, 3 = gold. */
+  function miniMedal(type, score) {
+    const m = MINI[type];
+    if (!m || typeof score !== 'number' || !isFinite(score)) return 0;
+    return m.tiers.filter((t) => (m.lower ? score <= t : score >= t)).length;
+  }
+  /** Record one counted try. Returns what happened; never throws on a practice run.
+      Needs the building to exist, and stops counting after MINI_TRIES tries a week. */
+  function recordMini(s, type, score) {
+    const medal = miniMedal(type, score);
+    const owns = Object.values(s.grid).some((b) => b.type === type);
+    s.mini = s.mini || {};
+    const m = s.mini[type] || { tries: 0, medal: 0, boost: 0 };
+    if (!MINI[type] || !owns || m.tries >= MINI_TRIES) return { medal, counted: false, best: m.medal, boost: m.boost, triesLeft: Math.max(0, MINI_TRIES - m.tries) };
+    m.tries++;
+    if (medal > m.medal) { m.medal = medal; m.boost = MINI_BOOST[medal]; }
+    s.mini[type] = m;
+    return { medal, counted: true, best: m.medal, boost: m.boost, triesLeft: MINI_TRIES - m.tries };
+  }
+
   const BADGES = [
     { id: 'sellout', name: 'First Sellout', reward: 100e3, test: (s, rep) => rep.sellout },
     { id: 'streak3', name: 'Three Straight Wins', reward: 150e3, test: (s) => s.streak >= 3 },
@@ -474,6 +511,8 @@
     s.cash += rep.net;
     if (rep.sellout) s.sellouts++;
     s.promo = 'none';
+    rep.mini = s.mini || {};
+    s.mini = {}; // medals last one game day
     if (s.badges) {
       BADGES.forEach((b) => {
         if (!s.badges[b.id] && b.test(s, rep)) { s.badges[b.id] = r.season + ':' + r.week; s.cash += b.reward; rep.badges.push(b); }
@@ -563,7 +602,7 @@
     GRID, STADIUM_TILES, BUILDINGS, TYPES, STADIUM, PRICES, PROMOS, BADGES, STAR_PTS, BUST_PTS,
     key, isStadium, median, standings, teamName, weekResult, newGame, newFranchise, neighbors, nearStadium, onEdge,
     synergy, effects, forecast, value, build, upgrade, demolish, refund, upgradeStadium, settle, aiTurn,
-    nextWeek, playWeek, leaderboard, clamp, slot, matchup, bonusTable, opponentOf, tradeImpact, playerAvg, travelers, attachTravel,
+    nextWeek, playWeek, leaderboard, clamp, slot, matchup, bonusTable, opponentOf, tradeImpact, playerAvg, travelers, attachTravel, MINI, MINI_TRIES, MINI_BOOST, MEDALS, miniMedal, recordMini,
   });
   if (typeof module !== 'undefined' && module.exports) module.exports = FT;
 })(typeof window !== 'undefined' ? window : globalThis);

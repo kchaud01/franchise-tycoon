@@ -19,7 +19,7 @@ const SYNC_MS = 4 * 60 * 1000;
 const PAYOUTS = ['all', 'half', 'top3'];
 /** League settings the commissioner can change. Defaults come from Sleeper where Sleeper knows the answer. */
 function defaultSettings(data) {
-  return { cap: 5, travelCut: 0.5, payout: 'all', playoffStart: data.playoffStart || 15, lastWeek: data.lastWeek || 17, playoffBonus: false, lockDay: 4, lockHour: 20 };
+  return { cap: 5, travelCut: 0.5, payout: 'all', playoffStart: data.playoffStart || 15, lastWeek: data.lastWeek || 17, playoffBonus: false, miniBoost: true, lockDay: 4, lockHour: 20 };
 }
 function cleanSettings(base, inp) {
   const s = Object.assign({}, base), int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
@@ -29,6 +29,7 @@ function cleanSettings(base, inp) {
   if (int(inp.lastWeek, 1, 18)) s.lastWeek = inp.lastWeek;
   if (int(inp.playoffStart, 2, 19)) s.playoffStart = inp.playoffStart;
   if (typeof inp.playoffBonus === 'boolean') s.playoffBonus = inp.playoffBonus;
+  if (typeof inp.miniBoost === 'boolean') s.miniBoost = inp.miniBoost;
   if (int(inp.lockDay, 0, 6)) s.lockDay = inp.lockDay;
   if (int(inp.lockHour, 0, 23)) s.lockHour = inp.lockHour;
   return s;
@@ -180,6 +181,12 @@ function createApp(opts) {
       case 'stadium': needOpen(); must(FT.upgradeStadium(f), 'The stadium cannot be expanded right now.'); break;
       case 'price': needOpen(); must([0, 1, 2].indexOf(b.v) >= 0, 'Unknown ticket price.'); f.price = b.v; break;
       case 'promo': needOpen(); must(FT.PROMOS[b.v] && FT.PROMOS[b.v].cost <= f.cash, 'That promotion is not available.'); f.promo = b.v; break;
+      case 'mini': { // the score is reported by the owner's browser, so the boost is small and the commissioner can turn it off
+        needOpen(); must(FT.MINI[b.type] && typeof b.score === 'number' && isFinite(b.score), 'Unknown mini-game.');
+        FT.recordMini(f, b.type, b.score);
+        if (lg.settings.miniBoost === false && f.mini[b.type]) f.mini[b.type].boost = 0;
+        break;
+      }
       case 'color': must(/^#[0-9a-f]{6}$/i.test(b.v), 'Unknown colour.'); f.color = b.v; break;
       case 'settings': must(who.admin, 'Only the commissioner can change league settings.'); must(b.v && typeof b.v === 'object', 'Missing settings.'); lg.settings = cleanSettings(lg.settings, b.v); applySettings(lg); break;
       case 'demoLock': must(who.admin && lg.data.source !== 'sleeper', 'Demo leagues only.'); lg.demoLocked = true; break;

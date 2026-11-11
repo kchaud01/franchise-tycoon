@@ -52,6 +52,8 @@ Each owner is compared with an auto-pilot owner who had the same fantasy result 
 
 **Trades.** Completed Sleeper trades change fan mood in the week they happen: acquiring high scorers lifts hype, the home crowd and jersey sales; trading them away does the opposite. This affects franchises but not the bonus table, because each owner's auto-pilot gets the same trade.
 
+**Mini-games.** Every building has a short arcade game. Each owner gets three tries per building per week, and the best medal lifts that building by 4%, 7% or 10% on the next game day. Scores are reported by each owner's own browser, so the commissioner can switch the boost off on the Admin tab and leave the games as bragging rights.
+
 **Visiting other cities.** On the League tab, tap any franchise to see that owner's city.
 
 Commissioner settings (Admin tab): maximum points per week, the most a visiting crowd can cut a home owner's bonus, who is paid (everyone above last place, top half, or top three), playoff start week, last week of the season, whether bonuses apply in the playoffs, and the lock day and hour.
