@@ -111,6 +111,8 @@ main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1
 .zoom { position: absolute; left: max(12px, env(safe-area-inset-left, 0px)); bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
 .zoom button { width: 38px; height: 34px; background: rgba(22, 31, 45, .85); border: 1px solid var(--line); border-radius: 6px; font: 600 17px var(--display); }
 .zoom button:hover { border-color: var(--muted); }
+.zoom #btn-pixel, .zoom #btn-zoomreset { width: auto; padding: 0 9px; font-size: 14px; text-transform: uppercase; letter-spacing: .06em; }
+.zoom #btn-pixel.on { background: var(--team); border-color: transparent; color: #fff; }
 .side { display: flex; flex-direction: column; min-height: 0; background: var(--panel); border-left: 1px solid var(--line); }
 .tabs { display: flex; border-bottom: 1px solid var(--line); }
 .tabs button { flex: 1; min-width: 0; background: none; border: 0; border-bottom: 3px solid transparent; padding: 12px 2px 9px; font-size: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; color: var(--muted); }
@@ -302,6 +304,7 @@ p.won { margin: 0; }
           <button data-act="zoomin" id="btn-zoomin" aria-label="Zoom in">+</button>
           <button data-act="zoomout" id="btn-zoomout" aria-label="Zoom out">&minus;</button>
           <button data-act="zoomreset" id="btn-zoomreset" aria-label="Reset view">Fit</button>
+          <button data-act="pixel" id="btn-pixel" aria-pressed="false" aria-label="Pixel look on or off">Pixel</button>
         </div>
       </section>
       <aside class="side">
@@ -1195,6 +1198,22 @@ p.won { margin: 0; }
     cream: '#efe6d2', brick: '#a65f48', white: '#eef1f4', steel: '#6d7887', red: '#e5484d', wood: '#8a6240',
   };
 
+  // ---- pixel look (a preview filter, not redrawn art) ------------------------------------
+  // The scene is drawn small, then every pixel is snapped to a short colour ramp with ordered dithering and
+  // hard-edged transparency, and the browser scales it up without smoothing.
+  const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  function pixelize(ctx, w, h) {
+    const im = ctx.getImageData(0, 0, w, h), d = im.data;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (d[i + 3] < 110) { d[i + 3] = 0; continue; }
+      d[i + 3] = 255;
+      const o = (BAYER[(y & 3) * 4 + (x & 3)] - 7.5) * 1.5;
+      for (let k = 0; k < 3; k++) { const v = Math.round((d[i + k] + o) / 24) * 24; d[i + k] = v < 0 ? 0 : v > 255 ? 255 : v; }
+    }
+    ctx.putImageData(im, 0, 0);
+  }
+
   function Renderer(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
@@ -1212,7 +1231,8 @@ p.won { margin: 0; }
   const R = Renderer.prototype;
 
   R.resize = function () {
-    const c = this.canvas, dpr = Math.min(2, root.devicePixelRatio || 1);
+    const c = this.canvas, dpr = this.pixel ? 1 / this.pixel : Math.min(2, root.devicePixelRatio || 1);
+    c.style.imageRendering = this.pixel ? 'pixelated' : '';
     const w = c.clientWidth || 800, h = c.clientHeight || 560;
     c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
     this.w = w; this.h = h; this.dpr = dpr;
@@ -2361,6 +2381,7 @@ p.won { margin: 0; }
       ctx.globalAlpha = Math.max(0, p.life / 40); ctx.fillStyle = p.col; ctx.fillRect(p.x - 1.2, p.y - 1.2, 2.4, 2.4);
     });
     ctx.restore();
+    if (this.pixel) pixelize(ctx, this.canvas.width, this.canvas.height);
   };
 
   R.fireworks = function (n) {
@@ -2378,9 +2399,9 @@ p.won { margin: 0; }
     let last = 0;
     const loop = (now) => {
       this.raf = root.requestAnimationFrame(loop);
-      if (now - last < (still ? 400 : 40)) return;
+      if (now - last < (still ? 400 : this.pixel ? 110 : 40)) return; // the pixel look steps like sprite animation
       last = now;
-      if (!still) this.t += 1;
+      if (!still) this.t += this.pixel ? 3 : 1;
       this.draw();
     };
     this.raf = root.requestAnimationFrame(loop);
@@ -2393,10 +2414,11 @@ p.won { margin: 0; }
       const r = canvas.townRenderer || (canvas.townRenderer = new Renderer(canvas));
       canvas.toneHooked = true;
       r.state = { color, color2: look.color2, setting: look.setting, stadium: level, grid: {} }; r.night = !!night; r.fill = 0.85; r.t = 67; r.score = '27-24';
-      r.resize(); r.zoom = 1.12; r.applyView(); r.draw();
+      r.pixel = look.pixel || 0; r.resize(); r.zoom = 1.12; r.applyView(); r.draw();
       return;
     }
-    const dpr = Math.min(2, root.devicePixelRatio || 1), w = canvas.clientWidth || 220, h = canvas.clientHeight || 180;
+    const dpr = look.pixel ? 1 / look.pixel : Math.min(2, root.devicePixelRatio || 1), w = canvas.clientWidth || 220, h = canvas.clientHeight || 180;
+    canvas.style.imageRendering = look.pixel ? 'pixelated' : '';
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
     const ctx = canvas.getContext('2d');
     if (!canvas.toneHooked) { hookTone(ctx); canvas.toneHooked = true; }
@@ -2416,6 +2438,7 @@ p.won { margin: 0; }
       DRAW[type](ctx, 0, 0, level, S, fake.t, fake);
     }
     FLOOD = false;
+    if (look.pixel) pixelize(ctx, canvas.width, canvas.height);
   };
 
   FT.Renderer = Renderer;
@@ -3198,6 +3221,7 @@ p.won { margin: 0; }
     if (!renderer) {
       const cv = $('#city');
       renderer = new FT.Renderer(cv);
+      try { if (localStorage.getItem(PIXEL_KEY) === '1') setPixel(true); } catch (e) { /* no stored preference */ }
       renderer.start();
       const pick = (e) => { const b = cv.getBoundingClientRect(); return renderer.pick(e.clientX - b.left, e.clientY - b.top); };
       // drag to pan (mouse always; touch only once zoomed in, so the page still scrolls), wheel to zoom, click to select
@@ -3411,6 +3435,13 @@ p.won { margin: 0; }
     return h;
   }
 
+  /** The pixel look is a per-device preference, kept apart from the franchise. */
+  const PIXEL_KEY = 'franchise-tycoon-pixel';
+  function setPixel(on) {
+    renderer.pixel = on ? 3 : 0; renderer.resize();
+    const b = $('#btn-pixel'); b.classList.toggle('on', !!on); b.setAttribute('aria-pressed', !!on);
+    try { localStorage.setItem(PIXEL_KEY, on ? '1' : '0'); } catch (e) { /* preference just will not stick */ }
+  }
   function syncTouch() { $('#city').style.touchAction = renderer.zoom > 1.05 ? 'none' : 'manipulation'; }
 
   // ---- actions --------------------------------------------------------------------------
@@ -3471,6 +3502,7 @@ p.won { margin: 0; }
     zoomin() { renderer.zoomBy(1.3); syncTouch(); },
     zoomout() { renderer.zoomBy(1 / 1.3); syncTouch(); },
     zoomreset() { renderer.resetView(); syncTouch(); },
+    pixel() { setPixel(!renderer.pixel); },
     menu() { const m = $('#menu'); m.hidden = !m.hidden; setup.wipe = false; $('#menu [data-act="reset"]').textContent = 'Start over'; },
     switchleague() { $('#menu').hidden = true; if (conn && conn.username) setup.username = conn.username; setup.keep = true; showSetup(); },
     reset() { if (!setup.wipe) { setup.wipe = true; $('#menu [data-act="reset"]').textContent = 'Tap again to erase the franchise'; return; } $('#menu').hidden = true; setup.wipe = false; setup.keep = false; wipe(); showSetup(); },

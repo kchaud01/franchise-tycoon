@@ -3,7 +3,7 @@
   'use strict';
   const FT = window.FT;
   const COLORS = ['#e4572e', '#f2b33d', '#3aa88f', '#4f8fd9', '#b06ab3', '#d9436b', '#5aa845', '#d8d2c2'];
-  let color = COLORS[0], color2 = '#eef1f4', night = false;
+  let color = COLORS[0], color2 = '#eef1f4', night = false, pixel = false;
   const money = (n) => '$' + (n >= 1e6 ? (n / 1e6).toFixed(n % 1e6 ? 2 : 0) + 'M' : Math.round(n / 1e3) + 'k');
   const card = (type, lv, title, lines, wide) => '<div class="lv' + (wide ? ' wide' : '') + '"><canvas data-type="' + type + '" data-lv="' + lv + '" role="img" aria-label="' + title + '"></canvas><div><b>' + title + '</b>' + lines.map((l, i) => (i ? '<span>' : '<em>') + l + (i ? '</span>' : '</em>')).join('') + '</div></div>';
 
@@ -34,11 +34,13 @@
     document.documentElement.style.setProperty('--team', color);
     document.getElementById('t-day').classList.toggle('on', !night);
     document.getElementById('t-night').classList.toggle('on', night);
+    document.getElementById('t-smooth').classList.toggle('on', !pixel); document.getElementById('t-pixel').classList.toggle('on', pixel);
     document.querySelectorAll('.swatch').forEach((s) => s.classList.toggle('on', s.dataset.color === color));
-    document.querySelectorAll('canvas[data-type]').forEach((c) => FT.drawPreview(c, c.dataset.type, +c.dataset.lv, color, night, { setting: c.dataset.setting, color2 }));
+    document.querySelectorAll('canvas[data-type]').forEach((c) => FT.drawPreview(c, c.dataset.type, +c.dataset.lv, color, night, { setting: c.dataset.setting, color2, pixel: pixel ? (c.dataset.type === 'town' ? 2 : 2) : 0 }));
   }
   document.addEventListener('click', (e) => {
-    const n = e.target.closest('[data-night]'), c = e.target.closest('[data-color]');
+    const n = e.target.closest('[data-night]'), c = e.target.closest('[data-color]'), px = e.target.closest('[data-pixel]');
+    if (px) { pixel = px.dataset.pixel === '1'; paint(); }
     if (n) night = n.dataset.night === '1';
     if (c) color = c.dataset.color;
     if (n || c) paint();

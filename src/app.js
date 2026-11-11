@@ -402,6 +402,7 @@
     if (!renderer) {
       const cv = $('#city');
       renderer = new FT.Renderer(cv);
+      try { if (localStorage.getItem(PIXEL_KEY) === '1') setPixel(true); } catch (e) { /* no stored preference */ }
       renderer.start();
       const pick = (e) => { const b = cv.getBoundingClientRect(); return renderer.pick(e.clientX - b.left, e.clientY - b.top); };
       // drag to pan (mouse always; touch only once zoomed in, so the page still scrolls), wheel to zoom, click to select
@@ -615,6 +616,13 @@
     return h;
   }
 
+  /** The pixel look is a per-device preference, kept apart from the franchise. */
+  const PIXEL_KEY = 'franchise-tycoon-pixel';
+  function setPixel(on) {
+    renderer.pixel = on ? 3 : 0; renderer.resize();
+    const b = $('#btn-pixel'); b.classList.toggle('on', !!on); b.setAttribute('aria-pressed', !!on);
+    try { localStorage.setItem(PIXEL_KEY, on ? '1' : '0'); } catch (e) { /* preference just will not stick */ }
+  }
   function syncTouch() { $('#city').style.touchAction = renderer.zoom > 1.05 ? 'none' : 'manipulation'; }
 
   // ---- actions --------------------------------------------------------------------------
@@ -675,6 +683,7 @@
     zoomin() { renderer.zoomBy(1.3); syncTouch(); },
     zoomout() { renderer.zoomBy(1 / 1.3); syncTouch(); },
     zoomreset() { renderer.resetView(); syncTouch(); },
+    pixel() { setPixel(!renderer.pixel); },
     menu() { const m = $('#menu'); m.hidden = !m.hidden; setup.wipe = false; $('#menu [data-act="reset"]').textContent = 'Start over'; },
     switchleague() { $('#menu').hidden = true; if (conn && conn.username) setup.username = conn.username; setup.keep = true; showSetup(); },
     reset() { if (!setup.wipe) { setup.wipe = true; $('#menu [data-act="reset"]').textContent = 'Tap again to erase the franchise'; return; } $('#menu').hidden = true; setup.wipe = false; setup.keep = false; wipe(); showSetup(); },
