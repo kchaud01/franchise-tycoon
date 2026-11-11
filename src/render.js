@@ -191,6 +191,23 @@
     });
   }
   /** Text painted flat on a wall: skewed to follow the isometric edge. */
+  /** Lettering centred on a sign board that runs `len` grid units along a wall from (x, y), with its bottom edge at
+      height z and `h` px tall. The text shrinks to fit the board, so long words never run off the end.
+      side 'L' boards run along +x; side 'R' boards run along -y. */
+  function signText(ctx, side, x, y, z, len, h, text, size, fill) {
+    const [px, py] = P(x, y, z), room = len * HW * 0.84;
+    ctx.save();
+    ctx.transform(1, side === 'L' ? 0.5 : -0.5, 0, 1, px, py);
+    let fs = size;
+    ctx.font = '700 ' + fs + 'px "Barlow Condensed", "Arial Narrow", sans-serif';
+    const tw = ctx.measureText(text).width;
+    if (tw > room) { fs = Math.max(3, (fs * room) / tw); ctx.font = '700 ' + fs + 'px "Barlow Condensed", "Arial Narrow", sans-serif'; }
+    fs = Math.min(fs, h * 0.8);
+    ctx.font = '700 ' + fs + 'px "Barlow Condensed", "Arial Narrow", sans-serif';
+    ctx.fillStyle = fill; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(text, (len * HW) / 2, -h / 2 + fs * 0.06);
+    ctx.restore();
+  }
   function wallText(ctx, side, x, y, z, text, size, fill) {
     const [px, py] = side === 'L' ? P(x, y, z) : P(x, y, z);
     ctx.save();
@@ -314,7 +331,7 @@
         wallRect(ctx, 'L', gx + 0.36, gy + 0.56, 0.26, 0.14, 4, 0, 1, 0, 2.5, C.red);
         ellipse(ctx, P(gx + 0.42, gy + 0.7, 2)[0], P(gx + 0.42, gy + 0.7, 2)[1] - 1, 2.6, 2.6, '#22282f'); ellipse(ctx, P(gx + 0.58, gy + 0.7, 2)[0], P(gx + 0.58, gy + 0.7, 2)[1] - 1, 2.6, 2.6, '#22282f');
         umbrella(ctx, gx + 0.49, gy + 0.63, team, 9);
-        box(ctx, gx + 0.2, gy + 0.72, 0.06, 0.02, 2, 8, '#2b333d'); wallText(ctx, 'L', gx + 0.2, gy + 0.745, 5, 'DOGS', 4.5, C.lit);
+        box(ctx, gx + 0.16, gy + 0.72, 0.14, 0.02, 2, 8, '#2b333d'); signText(ctx, 'L', gx + 0.16, gy + 0.74, 2, 0.14, 8, 'DOGS', 6, C.lit);
         return;
       }
       if (lv === 2) {
@@ -342,7 +359,7 @@
       box(ctx, x + 0.06, y + 0.06, 0.5, 0.4, 24, 16, '#efe6d2');
       windows(ctx, x + 0.06, y + 0.06, 0.5, 0.4, 24, 16, { rows: 1, cols: 4, seed: 7, base: 3, cap: 3, litRate: 1 });
       box(ctx, x + 0.04, y + 0.04, 0.54, 0.44, 40, 2, '#d8b45a');
-      box(ctx, x + 0.12, y + 0.24, 0.38, 0.04, 42, 10, '#1d1512'); wallText(ctx, 'L', x + 0.15, y + 0.28, 44, 'GRILL', 8, C.lit);
+      box(ctx, x + 0.12, y + 0.24, 0.38, 0.04, 42, 10, '#1d1512'); signText(ctx, 'L', x + 0.12, y + 0.28, 42, 0.38, 10, 'GRILL', 8, C.lit);
       umbrella(ctx, x + 0.68, y + 0.2, team, 24); umbrella(ctx, x + 0.68, y + 0.5, C.white, 24); umbrella(ctx, x + 0.3, y + 0.56, team, 24);
       stringLights(ctx, x, y + d, x + w, y + d, 36, C.lit, '#fff1c2');
       box(ctx, x + 0.3, y + d, 0.2, 0.12, 15, 2, team); post(ctx, x + 0.32, y + d + 0.11, 2, 15, '#d8b45a'); post(ctx, x + 0.48, y + d + 0.11, 2, 15, '#d8b45a');
@@ -387,7 +404,7 @@
       curtain(ctx, x, y, w, d, 2, 13, 1, 7, 31, '#cfe9ff', 1);
       wallRect(ctx, 'L', x, y, w, d, 2, 0.42, 0.58, 0, 10, '#17242f');
       vault(ctx, x - 0.02, y - 0.02, w + 0.04, d + 0.04, 15, 21, '#8fc7dd', 6);
-      box(ctx, x + 0.3, y + d, 0.24, 0.05, 15, 8, '#12202b'); wallText(ctx, 'L', x + 0.325, y + d + 0.05, 17, 'RAIL', 7, '#9fd8ff');
+      box(ctx, x + 0.3, y + d, 0.24, 0.05, 15, 8, '#12202b'); signText(ctx, 'L', x + 0.3, y + d + 0.05, 15, 0.24, 8, 'RAIL', 7, '#9fd8ff');
       [0.12, 0.5, 0.88].forEach((u) => box(ctx, gx + u - 0.025, gy + 0.8, 0.05, 0.06, 2, 9, '#8a929c'));
       box(ctx, gx + 0.02, gy + 0.76, 0.96, 0.15, 11, 2.5, '#aeb5bd');
       const s = ((t * 0.012) % 2) - 0.6, a = Math.max(0.03, s), b = Math.min(0.97, s + 0.56);
@@ -416,7 +433,7 @@
         wallRect(ctx, 'L', x, y, w, d, 2, 0.06, 0.94, 2, 13, C.lit); wallRect(ctx, 'R', x, y, w, d, 2, 0.06, 0.94, 2, 13, shade(C.lit, -0.2));
         wallRect(ctx, 'L', x, y, w, d, 2, 0.44, 0.56, 2, 13, '#7a5a3a');
         box(ctx, x - 0.02, y + d, w + 0.04, 0.08, 15, 2.5, team); box(ctx, x + w, y - 0.02, 0.08, d + 0.04, 15, 2.5, shade(team, -0.2));
-        box(ctx, x + 0.1, y + 0.28, w - 0.2, 0.05, h + 2, 12, team); wallText(ctx, 'L', x + 0.15, y + 0.33, h + 5, 'TEAM STORE', 7.5, C.white);
+        box(ctx, x + 0.1, y + 0.28, w - 0.2, 0.05, h + 2, 12, team); signText(ctx, 'L', x + 0.1, y + 0.33, h + 2, w - 0.2, 12, 'TEAM STORE', 8, C.white);
         return;
       }
       // flagship: three glass storeys, a colour fin, banners and a rooftop video board
@@ -429,7 +446,7 @@
       box(ctx, x - 0.03, y + d - 0.1, 0.07, 0.11, 2, 60, team);
       box(ctx, x + 0.14, y + 0.3, 0.5, 0.05, h + 2, 20, '#10171f');
       wallRect(ctx, 'L', x + 0.14, y + 0.3, 0.5, 0.05, h + 2, 0.04, 0.96, 2, 18, team);
-      wallText(ctx, 'L', x + 0.2, y + 0.35, h + 7, 'FLAGSHIP', 8.5, C.white);
+      signText(ctx, 'L', x + 0.14, y + 0.35, h + 4, 0.5, 16, 'FLAGSHIP', 9, C.white);
       glow(ctx, P(x + 0.4, y + 0.4, h + 12)[0], P(x + 0.4, y + 0.4, h + 12)[1], 30, team, 0.4);
     },
 
@@ -548,7 +565,7 @@
       wallRect(ctx, 'L', x, y, w, d, 10, 0.44, 0.56, 0, h, S.color); wallRect(ctx, 'R', x, y, w, d, 10, 0.44, 0.56, 0, h, shade(S.color, -0.25));
       box(ctx, x - 0.02, y - 0.02, w + 0.04, d + 0.04, 10 + h, 2, '#aeb5bd');
       box(ctx, x + 0.18, y + 0.16, 0.26, 0.26, 12 + h, 14, S.color);
-      wallText(ctx, 'L', x + 0.22, y + 0.42, 15 + h, 'HQ', 10, C.white);
+      signText(ctx, 'L', x + 0.18, y + 0.42, 12 + h, 0.26, 14, 'HQ', 10, C.white);
       const dsh = P(x + 0.5, y + 0.14, 12 + h); ellipse(ctx, dsh[0], dsh[1] - 4, 7, 5, '#dfe5ea', '#8a95a3', 1);
       [0.14, 0.26, 0.38].forEach((u, i) => flag(ctx, gx + u, gy + 0.92, 2, i === 1 ? S.color : TRIM, t + i * 7, 22));
     },
@@ -615,7 +632,7 @@
         tree(ctx, gx + 0.2, gy + 0.22, 0.8);
         box(ctx, gx + 0.3, gy + 0.14, 0.5, 0.05, 3, 30, '#1a222c');
         wallRect(ctx, 'L', gx + 0.3, gy + 0.14, 0.5, 0.05, 3, 0.05, 0.95, 8, 28, S.color);
-        if (R.score) wallText(ctx, 'L', gx + 0.36, gy + 0.19, 14, R.score, 10, C.white);
+        if (R.score) signText(ctx, 'L', gx + 0.3, gy + 0.19, 11, 0.5, 20, R.score, 11, C.white);
         glow(ctx, P(gx + 0.55, gy + 0.3, 20)[0], P(gx + 0.55, gy + 0.3, 20)[1], 26, S.color, 0.35);
         const c = P(gx + 0.56, gy + 0.6, 3);
         ellipse(ctx, c[0], c[1], 13, 6.5, '#8fa3ad'); ellipse(ctx, c[0], c[1], 10.5, 5.2, '#4fb4d8'); ellipse(ctx, c[0], c[1] - 1.5, 3.5, 1.8, '#d5f1fb');
@@ -634,7 +651,7 @@
       ellipse(ctx, hub[0], hub[1], 3, 3, S.color);
       box(ctx, gx + 0.5, gy + 0.1, 0.42, 0.05, 3, 36, '#1a222c');
       wallRect(ctx, 'L', gx + 0.5, gy + 0.1, 0.42, 0.05, 3, 0.05, 0.95, 10, 34, S.color);
-      if (R.score) wallText(ctx, 'L', gx + 0.55, gy + 0.15, 17, R.score, 11, C.white);
+      if (R.score) signText(ctx, 'L', gx + 0.5, gy + 0.15, 13, 0.42, 24, R.score, 12, C.white);
       glow(ctx, P(gx + 0.7, gy + 0.3, 24)[0], P(gx + 0.7, gy + 0.3, 24)[1], 30, S.color, 0.4);
       box(ctx, gx + 0.52, gy + 0.5, 0.36, 0.22, 2, 4, '#3d4957');
       [[0.53, 0.51], [0.87, 0.51], [0.53, 0.71], [0.87, 0.71]].forEach(([a, b]) => post(ctx, gx + a, gy + b, 6, 24, '#c5ccd6', 1.4));
@@ -1039,15 +1056,15 @@
       for (let c = 0; c < 4; c++) wallRect(ctx, 'L', x, y, w, d, z, c < 2 ? (c + 0.72) / 5 : (c + 1.72) / 5, c < 2 ? (c + 1.28) / 5 : (c + 2.28) / 5, 5, 16, C.lit);
       for (let c = 0; c < 3; c++) wallRect(ctx, 'R', x, y, w, d, z, (c + 0.25) / 3, (c + 0.75) / 3, 5, 16, shade(C.lit, -0.18));
       gable(ctx, x - 0.03, y - 0.03, w + 0.06, d + 0.06, z + 22, 13, '#55606f', '#9e5f4b');
-      wallText(ctx, 'L', x + 0.2, y + d + 0.02, z + 22.5, 'LIBRARY', 6.5, '#f1ecdc');
+      signText(ctx, 'L', x, y + d + 0.02, z + 19.5, w, 6, 'LIBRARY', 6.5, '#f1ecdc');
     },
     diner(ctx, gx, gy, v, S, t, face) {
       const x = gx + 0.16, y = gy + 0.22, w = 0.62, d = 0.44;
       box(ctx, x, y, w, d, 2, 14, '#d5dbe2');
       ['L', 'R'].forEach((s) => { wallRect(ctx, s, x, y, w, d, 2, 0, 1, 2, 4.5, s === 'L' ? C.red : shade(C.red, -0.25)); wallRect(ctx, s, x, y, w, d, 2, 0.06, 0.94, 6, 12, s === 'L' ? C.lit : shade(C.lit, -0.18)); });
       box(ctx, x - 0.02, y - 0.02, w + 0.04, d + 0.04, 16, 2, C.red);
-      if (face === 'R') { box(ctx, x + 0.5, y + 0.06, 0.05, 0.32, 18, 9, '#22303d'); wallText(ctx, 'R', x + 0.55, y + 0.36, 20, 'DINER', 7, Math.floor(t / 16) % 2 ? '#ff8a8a' : '#ffd685'); }
-      else { box(ctx, x + 0.1, y + 0.3, 0.42, 0.05, 18, 9, '#22303d'); wallText(ctx, 'L', x + 0.13, y + 0.35, 20, 'DINER', 7, Math.floor(t / 16) % 2 ? '#ff8a8a' : '#ffd685'); }
+      if (face === 'R') { box(ctx, x + 0.5, y + 0.06, 0.05, 0.32, 18, 9, '#22303d'); signText(ctx, 'R', x + 0.55, y + 0.38, 18, 0.32, 9, 'DINER', 8, Math.floor(t / 16) % 2 ? '#ff8a8a' : '#ffd685'); }
+      else { box(ctx, x + 0.1, y + 0.3, 0.42, 0.05, 18, 9, '#22303d'); signText(ctx, 'L', x + 0.1, y + 0.35, 18, 0.42, 9, 'DINER', 8, Math.floor(t / 16) % 2 ? '#ff8a8a' : '#ffd685'); }
       umbrella(ctx, gx + 0.22, gy + 0.84, C.red); umbrella(ctx, gx + 0.86, gy + 0.5, '#f2b33d');
     },
     cafe(ctx, gx, gy, v, S) {
@@ -1140,7 +1157,7 @@
       wallRect(ctx, 'L', x, y, w, d, 2, 0.08, 0.38, 4, 11, C.lit); wallRect(ctx, 'L', x, y, w, d, 2, 0.44, 0.58, 0, 11, '#3d2a22'); wallRect(ctx, 'L', x, y, w, d, 2, 0.64, 0.92, 4, 11, C.lit);
       box(ctx, x - 0.02, y + d, w + 0.04, 0.12, 13, 1.5, '#6f4e33'); post(ctx, x, y + d + 0.11, 2, 13, '#6f4e33'); post(ctx, x + w, y + d + 0.11, 2, 13, '#6f4e33');
       box(ctx, x - 0.02, y - 0.02, w + 0.04, d + 0.04, 17, 1.5, '#6f4e33');
-      box(ctx, x + 0.08, y + 0.26, w - 0.16, 0.04, 18.5, 8, '#efe6d2'); wallText(ctx, 'L', x + 0.11, y + 0.3, 20, 'GENERAL', 6.5, '#3d2a22');
+      box(ctx, x + 0.08, y + 0.26, w - 0.16, 0.04, 18.5, 8, '#efe6d2'); signText(ctx, 'L', x + 0.08, y + 0.3, 18.5, w - 0.16, 8, 'GENERAL', 7, '#3d2a22');
       cyl(ctx, gx + 0.84, gy + 0.74, 3, 2, 5, '#6f4e33'); cyl(ctx, gx + 0.9, gy + 0.64, 3, 2, 5, '#8a6240');
     },
     skyscraper(ctx, gx, gy, v) {
@@ -1181,7 +1198,7 @@
       for (let c = 1; c < 7; c++) wallRect(ctx, 'L', x, y, w, d, 2, c / 7 - 0.012, c / 7 + 0.012, 2, 11, '#d9d2c2');
       box(ctx, x - 0.02, y - 0.02, w + 0.04, d + 0.04, 17, 1.5, '#aeb5bd');
       vault(ctx, x + 0.1, y + 0.18, w - 0.2, d - 0.36, 18.5, 9, '#8fc7dd', 5);
-      box(ctx, x + 0.28, y + d, 0.28, 0.04, 12, 7, S.color); wallText(ctx, 'L', x + 0.31, y + d + 0.04, 13.5, 'GALLERIA', 5.5, C.white);
+      box(ctx, x + 0.28, y + d, 0.28, 0.04, 12, 7, S.color); signText(ctx, 'L', x + 0.28, y + d + 0.04, 12, 0.28, 7, 'GALLERIA', 6, C.white);
     },
     townhouses(ctx, gx, gy, v) {
       const cols = ['#e9dcc0', '#9aa7b4', '#c98f6a', '#dfe5ea'];
@@ -1393,7 +1410,7 @@
     post(ctx, x0, y, 0, zt, '#8a95a3', 1.4); post(ctx, x1, y, 0, zt, '#8a95a3', 1.4);
     poly(ctx, [P(x0, y, zb), P(x1, y, zb), P(x1, y, zt), P(x0, y, zt)], up ? S.color : '#efe9dc');
     const label = (up ? 'WELCOME ' : 'COME BACK ') + (this.mood.name || '').toUpperCase();
-    wallText(ctx, 'L', x0 + 0.12, y, zb + 2.5, label.slice(0, 22), 7.5, up ? '#ffffff' : C.red);
+    signText(ctx, 'L', x0, y, zb, x1 - x0, zt - zb, label.slice(0, 26), 8, up ? '#ffffff' : C.red);
   };
   /** An elevated line leaving town toward a linked city, with a train shuttling along it. */
   R.drawRail = function (ctx, name, k) {
@@ -1404,7 +1421,7 @@
     box(ctx, tx, y - 0.02, len, 0.1, z + 3, 6, '#f1f4f7');
     wallRect(ctx, 'L', tx, y - 0.02, len, 0.1, z + 3, 0, 1, 0.5, 1.8, S.color);
     wallRect(ctx, 'L', tx, y - 0.02, len, 0.1, z + 3, 0.04, 0.96, 2.6, 4.6, '#9fd8ff');
-    wallText(ctx, 'L', xb - 0.95, y + 0.1, z + 3.5, 'TO ' + String(name).toUpperCase().slice(0, 18), 5.5, '#f4f1ea');
+    signText(ctx, 'L', xb - 1.05, y + 0.1, z, 1.0, 3.5, 'TO ' + String(name).toUpperCase(), 5.5, '#f4f1ea');
   };
 
   // ---- travelling between cities -------------------------------------------------------------
